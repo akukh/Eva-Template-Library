@@ -1,25 +1,42 @@
 #pragma once
+#include <cstddef>
+#include <cstdint>
 
 namespace etl {
 
 template <typename T>
 struct allocator {
-    allocator();
+    [[nodiscard]] T* allocate(std::size_t const n);
+    void             deallocate(T* p, std::size_t const n);
 
-    allocator(allocator const& other);
-    allocator& operator=(allocator const& other);
+    template <typename U, typename... Args>
+    void construct(U* p, Args&&... args);
 
-    allocator(allocator&& other);
-    allocator& operator=(allocato&& other);
-
-    ~allocator();
-
-    void* allocate(std::size_t const n, std::int32_t const flag = 0);
-    void* allocate(std::size_t const  n,
-                   std::size_t const  alignment,
-                   std::size_t const  offset,
-                   std::int32_t const flag = 0);
-    void  deallocate(void* p, std::int32_t const n);
+    std::size_t max_size() const noexcept;
 };
+
+} // namespace etl
+
+// Implementation:
+namespace etl {
+
+template <typename T>
+[[nodiscard]] T* allocator<T>::allocate(std::size_t const n) { return static_cast<T*>(::operator new(n * sizeof(T))); }
+
+template <typename T>
+void allocator<T>::deallocate(T* p, std::size_t const n) {
+    ::operator delete(p);
+}
+
+template <typename T>
+template <typename U, typename... Args>
+void allocator<T>::construct(U* p, Args&&... args) {
+    ::new (p) U(std::forward<Args>(args)...);
+}
+
+template <typename T>
+std::size_t allocator<T>::max_size() const noexcept {
+    return std::numeric_limits<T>::max() / sizeof(T);
+}
 
 } // namespace etl
