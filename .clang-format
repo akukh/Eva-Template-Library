@@ -1,0 +1,31 @@
+---
+BasedOnStyle: LLVM
+IndentWidth: 4
+UseTab: Never
+ColumnLimit: 120
+---
+Language: Cpp
+AlwaysBreakTemplateDeclarations: true
+FixNamespaceComments: true
+AccessModifierOffset: -4
+IndentPPDirectives: AfterHash
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+BinPackArguments: false
+BinPackParameters: false
+AlwaysBreakAfterReturnType: None
+AlwaysBreakAfterDefinitionReturnType: None
+PenaltyReturnTypeOnItsOwnLine: 400
+PenaltyBreakBeforeFirstCallParameter: 400
+PenaltyBreakAssignment: 400
+PointerAlignment: Left
+DerivePointerAlignment: false
+IndentCaseLabels: true
+AllowAllParametersOfDeclarationOnNextLine: false
+AlignAfterOpenBracket: Align
+ConstructorInitializerIndentWidth: 8
+BreakConstructorInitializers: BeforeComma
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+---
+Language: ObjC
+---
