@@ -11,4 +11,8 @@
 
 #include <cstdlib>
 
-int main() {}
+#include <memory>
+
+#include "../include/vector.hpp"
+
+int main() { etl::vector<int> v(10); }
