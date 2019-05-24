@@ -6,8 +6,13 @@ namespace etl {
 
 template <typename T>
 struct allocator {
-    [[nodiscard]] T* allocate(std::size_t const n);
-    void             deallocate(T* p, std::size_t const n) noexcept;
+    typedef T              value_type;
+    typedef value_type*    pointer;
+    typedef std::size_t    size_type;
+    typedef std::ptrdiff_t difference_type;
+
+    [[nodiscard]] pointer allocate(size_type const n);
+    void                  deallocate(pointer p, [[maybe_unused]] size_type const n) noexcept;
 
     template <typename U, typename... Args>
     void construct(U* p, Args&&... args);
@@ -15,7 +20,7 @@ struct allocator {
     template <typename U>
     void destroy(U* p) noexcept;
 
-    std::size_t max_size() const noexcept;
+    size_type max_size() const noexcept;
 };
 
 } // namespace etl
@@ -24,32 +29,32 @@ struct allocator {
 namespace etl {
 
 template <typename T>
-[[nodiscard]] T* allocator<T>::allocate(std::size_t const n) {
+[[nodiscard]] allocator<T>::pointer allocator<T>::allocate(size_type const n) {
     if (n > max_size()) {
         throw std::bad_alloc();
     }
-    return static_cast<T*>(::operator new(n * sizeof(T)));
+    return static_cast<pointer>(::operator new(n * sizeof(T)));
 }
 
 template <typename T>
-void allocator<T>::deallocate(T* p, std::size_t const n) noexcept {
+void allocator<T>::deallocate(pointer p, [[maybe_unused]] size_type const n) noexcept {
     ::operator delete(p);
 }
 
 template <typename T>
 template <typename U, typename... Args>
 void allocator<T>::construct(U* p, Args&&... args) {
-    ::new(p) U(std::forward<Args>(args)...);
+    ::new (static_cast<void*>(&*p)) U(std::forward<Args>(args)...);
 }
 
 template <typename T>
 template <typename U>
 void allocator<T>::destroy(U* p) noexcept {
-    p->~U();
+    (&*p)->~U();
 }
 
 template <typename T>
-std::size_t allocator<T>::max_size() const noexcept {
+allocator<T>::size_type allocator<T>::max_size() const noexcept {
     return std::numeric_limits<T>::max() / sizeof(T);
 }
 

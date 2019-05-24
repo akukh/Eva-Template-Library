@@ -9,7 +9,7 @@ AlwaysBreakTemplateDeclarations: true
 FixNamespaceComments: true
 AccessModifierOffset: -4
 IndentPPDirectives: AfterHash
-AlignConsecutiveAssignments: true
+AlignConsecutiveAssignments: true 
 AlignConsecutiveDeclarations: true
 BinPackArguments: false
 BinPackParameters: false
@@ -23,9 +23,6 @@ DerivePointerAlignment: false
 IndentCaseLabels: true
 AllowAllParametersOfDeclarationOnNextLine: false
 AlignAfterOpenBracket: Align
-ConstructorInitializerIndentWidth: 8
-BreakConstructorInitializers: BeforeComma
-ConstructorInitializerAllOnOneLineOrOnePerLine: true
 ---
 Language: ObjC
 ---

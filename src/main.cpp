@@ -15,4 +15,10 @@
 
 #include "../include/vector.hpp"
 
-int main() { etl::vector<int> v(10); }
+int main() {
+    etl::vector<int> v1(10);
+    etl::vector<int> v2(v1);
+    std::vector<int>::const_iterator it;
+
+    std::size_t t;
+}
