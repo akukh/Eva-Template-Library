@@ -2,6 +2,11 @@
 #include <cstddef>
 #include <cstdint>
 
+// TODO:
+//  get rid of the unnecessary headers
+#include <utility>
+#include <limits>
+
 namespace etl {
 
 template <typename T>
@@ -21,6 +26,9 @@ struct allocator {
     void destroy(U* p) noexcept;
 
     size_type max_size() const noexcept;
+
+    template <typename U>
+    struct rebind { typedef allocator<U> other; };
 };
 
 } // namespace etl
@@ -29,9 +37,9 @@ struct allocator {
 namespace etl {
 
 template <typename T>
-[[nodiscard]] allocator<T>::pointer allocator<T>::allocate(size_type const n) {
+[[nodiscard]] typename allocator<T>::pointer allocator<T>::allocate(size_type const n) {
     if (n > max_size()) {
-        throw std::bad_alloc();
+        throw "bad_alloc"; // TODO: throw bad_alloc()
     }
     return static_cast<pointer>(::operator new(n * sizeof(T)));
 }
@@ -44,7 +52,7 @@ void allocator<T>::deallocate(pointer p, [[maybe_unused]] size_type const n) noe
 template <typename T>
 template <typename U, typename... Args>
 void allocator<T>::construct(U* p, Args&&... args) {
-    ::new (static_cast<void*>(&*p)) U(std::forward<Args>(args)...);
+    ::new(static_cast<void*>(&*p)) U(std::forward<Args>(args)...);
 }
 
 template <typename T>
@@ -54,7 +62,7 @@ void allocator<T>::destroy(U* p) noexcept {
 }
 
 template <typename T>
-allocator<T>::size_type allocator<T>::max_size() const noexcept {
+typename allocator<T>::size_type allocator<T>::max_size() const noexcept {
     return std::numeric_limits<T>::max() / sizeof(T);
 }
 

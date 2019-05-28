@@ -1,16 +1,34 @@
 #pragma once
-#include "algorithm.hpp"
+// #include "algorithm.hpp"
 #include "allocator.hpp"
+#include "iterator.hpp"
+#include "type_traits.hpp"
 
 namespace etl {
 
 template <typename T, typename A = allocator<T>>
 class vector {
+    template <typename Type, typename Allocator = allocator<T>>
+    struct vector_base;
+
+    typedef vector_base<T, A> base;
+
 public:
-    typedef T*             pointer;
-    typedef pointer        iterator;
-    typedef iterator const const_iterator;
-    explicit vector(std::size_t const n, T const& value = T(), A const& allocator = A());
+    typedef T                              value_type;
+    typedef A                              allocator_type;
+    typedef typename base::alloc_traits    alloc_traits;
+    typedef typename base::size_type       size_type;
+    typedef typename base::difference_type difference_type;
+    typedef typename base::reference       reference;
+    typedef typename base::const_reference const_reference;
+    typedef typename base::pointer         pointer;
+    typedef typename base::const_pointer   const_pointer;
+    typedef wrap_iter<pointer>             iterator;
+    typedef wrap_iter<const_pointer>       const_iterator;
+    // TODO:
+    //  implement reverse iterators
+
+    explicit vector(size_type const n, value_type const& value = T(), allocator_type const& allocator = A());
 
     vector(vector const& other);
     vector& operator=(vector const& other);
@@ -20,23 +38,20 @@ public:
 
     ~vector();
 
-    std::size_t size() const noexcept;
-    std::size_t capacity() const noexcept;
+    size_type size() const noexcept;
+    size_type capacity() const noexcept;
 
-    void reserve(std::size_t const n);
-    void resize(std::size_t const n, T const& value = T());
+    void reserve(size_type const n);
+    void resize(size_type const n, value_type const& value = T());
 
     void clear();
 
-    void push_back(T const& value);
+    void push_back(value_type const& value);
 
 private:
     void destroy_elements() noexcept;
 
-    template <typename Type, typename Alloc = allocator<T>>
-    struct vector_base;
-
-    vector_base<T, A> base_;
+    base base_;
 };
 
 } // namespace etl
@@ -45,11 +60,19 @@ private:
 namespace etl {
 
 template <typename T, typename A>
-template <typename Type, typename Alloc>
+template <typename Type, typename Allocator>
 struct vector<T, A>::vector_base {
-    typedef Alloc       allocator_type;
-    typedef std::size_t size_type;
-    typedef Type*       pointer;
+    typedef T                                      value_type;
+    typedef Allocator                              allocator_type;
+    typedef allocator_traits<allocator_type>       alloc_traits;
+    typedef value_type&                            reference;
+    typedef const value_type&                      const_reference;
+    typedef typename alloc_traits::size_type       size_type;
+    typedef typename alloc_traits::difference_type difference_type;
+    typedef typename alloc_traits::pointer         pointer;
+    typedef typename alloc_traits::const_pointer   const_pointer;
+    typedef pointer                                iterator;
+    typedef const_pointer                          const_iterator;
 
     allocator_type allocator_;
     pointer        element_;
@@ -74,7 +97,8 @@ struct vector<T, A>::vector_base {
 };
 
 template <typename T, typename A>
-vector<T, A>::vector(std::size_t const n, T const& value, A const& allocator) : base_{allocator, n} {
+vector<T, A>::vector(size_type const n, value_type const& value, allocator_type const& allocator)
+    : base_{allocator, n} {
     T* current;
     try {
         T* last = base_.element_ + n;
@@ -145,12 +169,12 @@ void vector<T, A>::destroy_elements() noexcept {
 }
 
 template <typename T, typename A>
-std::size_t vector<T, A>::size() const noexcept {
+typename vector<T, A>::size_type vector<T, A>::size() const noexcept {
     return base_.space_ - base_.element_;
 }
 
 template <typename T, typename A>
-std::size_t vector<T, A>::capacity() const noexcept {
+typename vector<T, A>::size_type vector<T, A>::capacity() const noexcept {
     return base_.last_ - base_.element_;
 }
 

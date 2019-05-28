@@ -58,7 +58,7 @@ struct allocator<void const> {
 //----------------------------------------------------------------------------------------------------------------------
 template <typename T> struct remove_reference      { typedef T type; };
 template <typename T> struct remove_reference<T&>  { typedef T type; };
-template <typename T> struct remove_reference<T&&> { typedef _Tp type; };
+template <typename T> struct remove_reference<T&&> { typedef T type; };
 
 template <typename T>
 using remove_reference_t = typename remove_reference<T>::type;
@@ -78,17 +78,6 @@ struct pointer_trairs_element_type {
     typedef typename Ptr::element_type type;
 };
 
-template <typename Ptr>
-struct pointer_traits {
-    typedef Ptr                                                 pointer;
-    typedef typename pointer_traits_element_type<pointer>::type element_type;
-};
-template <typename T>
-struct pointer_traits<T*> {
-    typedef T* pointer;
-    typedef T  element_type;
-};
-
 template <typename T, typename U>
 struct has_rebind {
 private:
@@ -105,6 +94,23 @@ struct pointer_traits_rebind {
     typedef typename T::template rebind<U>::other type;
 };
 
+template <typename Ptr>
+struct pointer_traits {
+    typedef Ptr                                                 pointer;
+    typedef typename pointer_traits_element_type<pointer>::type element_type;
+
+    template <typename U> struct rebind {
+        typedef typename pointer_traits_rebind<pointer, U>::type other;
+    };
+};
+template <typename T>
+struct pointer_traits<T*> {
+    typedef T* pointer;
+    typedef T  element_type;
+
+    template <typename U> struct rebind { typedef U* other; };
+};
+
 template <typename From, typename To>
 struct rebind_pointer {
     typedef typename pointer_traits<From>::template rebind<To>::other type;
@@ -115,7 +121,7 @@ struct has_pointer_type : false_type {};
 template <typename T>
 struct has_pointer_type<T, typename void_t<typename T::pointer>::type> : true_type {};
 
-namespace poiter_type_impl {
+namespace pointer_type_impl {
 
 template <typename T, typename U, bool = has_pointer_type<U>::value>
 struct pointer_type {
@@ -131,7 +137,7 @@ struct pointer_type<T, U, false> {
 
 template <typename T, typename U>
 struct pointer_type {
-    typedef typename poiter_type_impl::pointer_type<T, typename remove_reference<U>::type>::type type;
+    typedef typename pointer_type_impl::pointer_type<T, typename remove_reference<U>::type>::type type;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -186,23 +192,28 @@ struct find_first<type_list<H, T>, Size, false> {
 //----------------------------------------------------------------------------------------------------------------------
 // Make unsigned
 //----------------------------------------------------------------------------------------------------------------------
+namespace make_unsigned_impl {
+
 template <typename T, bool = true /* is_integral<T>::value || is_enum<Tp>::value */>
-struct make_unsigned__ {};
+struct make_unsigned {};
 
 template <typename T>
-struct make_unsigned__<T, true> {
+struct make_unsigned<T, true> {
     typedef typename find_first<unsigned_types, sizeof(T)>::type type;
 };
 
-template <> struct make_unsigned__<bool, true> {};
-template <> struct make_unsigned__<signed int, true>    { typedef unsigned int type; };
-template <> struct make_unsigned__<unsigned int, true>  { typedef unsigned int type; };
-template <> struct make_unsigned__<signed long, true>   { typedef unsigned long type; };
-template <> struct make_unsigned__<unsigned long, true> { typedef unsigned long type; };
+template <> struct make_unsigned<bool,          true> {};
+template <> struct make_unsigned<signed int,    true> { typedef unsigned int type; };
+template <> struct make_unsigned<unsigned int,  true> { typedef unsigned int type; };
+template <> struct make_unsigned<signed long,   true> { typedef unsigned long type; };
+template <> struct make_unsigned<unsigned long, true> { typedef unsigned long type; };
+
+} // namespace make_unsigned_impl
+
 
 template <typename T>
 struct make_unsigned {
-    typedef typename make_unsigned__<T>::type type;
+    typedef typename make_unsigned_impl::make_unsigned<T>::type type;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -256,9 +267,9 @@ struct alloc_traits_difference_type<Alloc, Ptr, true> {
 //----------------------------------------------------------------------------------------------------------------------
 // Allocator traits
 //----------------------------------------------------------------------------------------------------------------------
-template <typename Alloc>
+template <typename Allocator>
 struct allocator_traits {
-    typedef Alloc                               allocator_type;
+    typedef Allocator                           allocator_type;
     typedef typename allocator_type::value_type value_type;
 
     typedef typename pointer_type<value_type, allocator_type>::type           pointer;
@@ -266,6 +277,17 @@ struct allocator_traits {
 
     typedef typename alloc_traits_difference_type<allocator_type, pointer>::type difference_type;
     typedef typename size_type<allocator_type, difference_type>::type            size_type;
+
+    // TODO:
+    //  complete implementation
+#if 0
+    template <typename T> struct rebind_alloc {
+        typedef typename allocator_traits_rebind<allocator_type, T>::type other;
+    };
+    template <typename T> struct rebind_traits {
+        typedef allocator_traits<typename rebind_alloc<T>::other> other;
+    };
+#endif
 };
 
 } // namespace etl
