@@ -12,9 +12,9 @@ struct random_access_iterator_tag : public bidirectional_iterator_tag {};
 template <typename T>
 struct has_iterator_category {
 private:
-    struct hidden { char l; char r; };
+    struct hidden { char с[2]; };
     template <typename U> static hidden test(...);
-    template <typename U> static char test(typename U::iterator_category* = 0);
+    template <typename U> static char   test(typename U::iterator_category* = 0);
 public:
     static bool constexpr const value = sizeof(test<T>(0)) == 1;
 };

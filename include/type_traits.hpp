@@ -10,8 +10,10 @@ struct integral_constant {
     typedef integral_constant type;
 
     static T constexpr const value = v;
-    constexpr value_type operator()() const noexcept { return value; }
+
+    value_type constexpr operator()() const noexcept { return value; }
 };
+
 template <typename T, T v>
 T constexpr const integral_constant<T, v>::value;
 
@@ -71,20 +73,19 @@ struct has_element_type : false_type {};
 template <typename T>
 struct has_element_type<T, typename void_t<typename T::element_type>::type> : true_type {};
 
-template <typename Ptr, bool = has_element_type<Ptr>::value>
+template <typename Pointer, bool = has_element_type<Pointer>::value>
 struct pointer_traits_element_type;
-template <typename Ptr>
+template <typename Pointer>
 struct pointer_trairs_element_type {
-    typedef typename Ptr::element_type type;
+    typedef typename Pointer::element_type type;
 };
 
 template <typename T, typename U>
 struct has_rebind {
 private:
-    struct hidden { char l; char r; };
+    struct hidden { char c[2]; };
     template <typename X> static hidden test(...);
     template <typename X> static char   test(typename X::template rebind<U>* = 0);
-
 public:
     static bool constexpr const value = sizeof(test<T>(0)) == 1;
 };
@@ -94,9 +95,9 @@ struct pointer_traits_rebind {
     typedef typename T::template rebind<U>::other type;
 };
 
-template <typename Ptr>
+template <typename Pointer>
 struct pointer_traits {
-    typedef Ptr                                                 pointer;
+    typedef Pointer                                             pointer;
     typedef typename pointer_traits_element_type<pointer>::type element_type;
 
     template <typename U> struct rebind {
@@ -149,12 +150,12 @@ struct has_const_pointer : false_type {};
 template <typename T>
 struct has_const_pointer<T, typename void_t<typename T::const_pointer>::type> : true_type {};
 
-template <typename T, typename Ptr, typename Alloc, bool = has_const_pointer<Alloc>::value>
-struct const_pointer { typedef typename Alloc::const_pointer type; };
+template <typename T, typename Pointer, typename Allocator, bool = has_const_pointer<Allocator>::value>
+struct const_pointer { typedef typename Allocator::const_pointer type; };
 
-template <typename T, typename Ptr, typename Alloc>
-struct const_pointer<T, Ptr, Alloc, false> {
-    typedef typename pointer_traits<Ptr>::template rebind<T const>::other type;
+template <typename T, typename Pointer, typename Allocator>
+struct const_pointer<T, Pointer, Allocator, false> {
+    typedef typename pointer_traits<Pointer>::template rebind<T const>::other type;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -171,7 +172,11 @@ struct nat {};
 //----------------------------------------------------------------------------------------------------------------------
 // Types
 //----------------------------------------------------------------------------------------------------------------------
-typedef type_list<unsigned char, type_list<unsigned int, type_list<unsigned long, nat>>> unsigned_types;
+typedef type_list<unsigned char, 
+            type_list<unsigned int, 
+                type_list<unsigned long, nat>
+            >
+        > unsigned_types;
 
 //----------------------------------------------------------------------------------------------------------------------
 // Find first
@@ -203,9 +208,9 @@ struct make_unsigned<T, true> {
 };
 
 template <> struct make_unsigned<bool,          true> {};
-template <> struct make_unsigned<signed int,    true> { typedef unsigned int type; };
-template <> struct make_unsigned<unsigned int,  true> { typedef unsigned int type; };
-template <> struct make_unsigned<signed long,   true> { typedef unsigned long type; };
+template <> struct make_unsigned<signed   int,  true> { typedef signed   int  type; };
+template <> struct make_unsigned<unsigned int,  true> { typedef unsigned int  type; };
+template <> struct make_unsigned<signed   long, true> { typedef signed   long type; };
 template <> struct make_unsigned<unsigned long, true> { typedef unsigned long type; };
 
 } // namespace make_unsigned_impl
@@ -225,14 +230,14 @@ struct has_size_type : false_type {};
 template <typename T>
 struct has_size_type<T, typename void_t<typename T::size_type>::type> : true_type {};
 
-template <typename Alloc, typename DiffType, bool = has_size_type<Alloc>::value>
+template <typename Allocator, typename DiffType, bool = has_size_type<Allocator>::value>
 struct size_type {
     typedef typename make_unsigned<DiffType>::type type;
 };
 
-template <typename Alloc, typename DiffType>
-struct size_type<Alloc, DiffType, true> {
-    typedef typename Alloc::size_type type;
+template <typename Allocator, typename DiffType>
+struct size_type<Allocator, DiffType, true> {
+    typedef typename Allocator::size_type type;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -244,24 +249,24 @@ struct has_difference_type : false_type {};
 template <typename T>
 struct has_difference_type<T, typename void_t<typename T::difference_type>::type> : true_type {};
 
-template <typename Ptr, bool = has_difference_type<Ptr>::value>
+template <typename Pointer, bool = has_difference_type<Pointer>::value>
 struct pointer_traits_difference_type {
     typedef ptrdiff_t type;
 };
 
-template <typename Ptr>
-struct pointer_traits_difference_type<Ptr, true> {
-    typedef typename Ptr::difference_type type;
+template <typename Pointer>
+struct pointer_traits_difference_type<Pointer, true> {
+    typedef typename Pointer::difference_type type;
 };
 
-template <class Alloc, class Ptr, bool = has_difference_type<Alloc>::value>
+template <class Allocator, class Pointer, bool = has_difference_type<Allocator>::value>
 struct alloc_traits_difference_type {
-    typedef typename pointer_traits<Ptr>::difference_type type;
+    typedef typename pointer_traits<Pointer>::difference_type type;
 };
 
-template <class Alloc, class Ptr>
-struct alloc_traits_difference_type<Alloc, Ptr, true> {
-    typedef typename Alloc::difference_type type;
+template <class Allocator, class Pointer>
+struct alloc_traits_difference_type<Allocator, Pointer, true> {
+    typedef typename Allocator::difference_type type;
 };
 
 //----------------------------------------------------------------------------------------------------------------------
