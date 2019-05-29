@@ -1,6 +1,7 @@
 #pragma once
 #include <cstddef>
 
+// clang-format off
 namespace etl {
 
 // Helper class:
@@ -28,6 +29,22 @@ struct enable_if<true, T> { typedef T type; };
 
 template <typename T>
 struct void_t { typedef void type; };
+
+//----------------------------------------------------------------------------------------------------------------------
+// Trait to check is some struct or class has a concrete field:
+//----------------------------------------------------------------------------------------------------------------------
+template <typename T>
+struct has_x_field {
+private:
+    struct two { char с[2]; };
+    template <typename C, C> struct ch_t;
+    // NOTE: if C has a member named x the second `test` function will be chosen,
+    // otherwise the one with the elipsis will be chosen.
+    template <typename C>             static two  test(...);
+    template <typename C, typename U> static char test(ch_t<U C::*, &C::x>* = 0);
+public:
+    static bool const value = sizeof(test<T>(0)) == 2;
+};
 
 //----------------------------------------------------------------------------------------------------------------------
 // Allocator
@@ -83,11 +100,11 @@ struct pointer_trairs_element_type {
 template <typename T, typename U>
 struct has_rebind {
 private:
-    struct hidden { char c[2]; };
-    template <typename X> static hidden test(...);
-    template <typename X> static char   test(typename X::template rebind<U>* = 0);
+    struct two { char с[2]; };
+    template <typename C> static two  test(...);
+    template <typename C> static char test(typename C::template rebind<C>* = 0);
 public:
-    static bool constexpr const value = sizeof(test<T>(0)) == 1;
+    static bool const value = sizeof(test<T>(0)) == 1;
 };
 
 template <typename T, typename U, bool = has_rebind<T, U>::value>

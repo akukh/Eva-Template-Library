@@ -1,6 +1,7 @@
 #pragma once
 #include <cstddef>
 
+// clang-format off
 namespace etl {
 
 struct input_iterator_tag {};
@@ -12,11 +13,11 @@ struct random_access_iterator_tag : public bidirectional_iterator_tag {};
 template <typename T>
 struct has_iterator_category {
 private:
-    struct hidden { char с[2]; };
-    template <typename U> static hidden test(...);
-    template <typename U> static char   test(typename U::iterator_category* = 0);
+    struct two { char с[2]; };
+    template <typename U> static two  test(...);
+    template <typename U> static char test(typename U::iterator_category* = 0);
 public:
-    static bool constexpr const value = sizeof(test<T>(0)) == 1;
+    static bool const value = sizeof(test<T>(0)) == 1;
 };
 
 namespace iterator_traits_impl {
