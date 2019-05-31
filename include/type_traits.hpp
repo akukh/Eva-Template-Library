@@ -310,6 +310,12 @@ struct allocator_traits {
         typedef allocator_traits<typename rebind_alloc<T>::other> other;
     };
 #endif
+
+    static pointer allocate(allocator_type& a, size_type n) { return a.allocate(n); }
+    static void    deallocate(allocator_type& a, pointer p, size_type n) noexcept { a.deallocate(p, n); }
+    
+    template <typename T>
+    static void destroy(allocator_type& a, T* p) { a.destroy(p); }
 };
 
 } // namespace etl

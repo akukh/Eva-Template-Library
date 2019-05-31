@@ -17,8 +17,16 @@
 
 int main() {
     etl::vector<int> v1(10);
+    v1.push_back(5);
+    v1.push_back(1);
+    v1.push_back(3);
+    int c = v1.capacity();
+    int s = v1.size();
+
+    std::cout << c << s;
     etl::vector<int> v2(v1);
+
     std::vector<int>::const_iterator it;
 
-    std::size_t t;
+    // std::size_t t;
 }

@@ -4,9 +4,10 @@
 
 // TODO:
 //  get rid of the unnecessary headers
-#include <utility>
 #include <limits>
+#include <utility>
 
+// clang-format off
 namespace etl {
 
 template <typename T>
@@ -52,13 +53,13 @@ void allocator<T>::deallocate(pointer p, [[maybe_unused]] size_type const n) noe
 template <typename T>
 template <typename U, typename... Args>
 void allocator<T>::construct(U* p, Args&&... args) {
-    ::new(static_cast<void*>(&*p)) U(std::forward<Args>(args)...);
+    ::new(static_cast<void*>(p)) U(std::forward<Args>(args)...);
 }
 
 template <typename T>
 template <typename U>
 void allocator<T>::destroy(U* p) noexcept {
-    (&*p)->~U();
+    p->~U();
 }
 
 template <typename T>

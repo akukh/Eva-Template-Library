@@ -1,9 +1,8 @@
 #pragma once
-#include "iterator.hpp"
 
 namespace etl {
 
-template <typename InputIterator, class OutputIterator>
+template <typename InputIterator, typename OutputIterator>
 OutputIterator copy(InputIterator first, InputIterator last, OutputIterator d_first) {
     while (first != last) {
         *d_first++ = *first++;
@@ -11,6 +10,7 @@ OutputIterator copy(InputIterator first, InputIterator last, OutputIterator d_fi
     return d_first;
 }
 
+/*
 template <class InputIterator, class ForwardIterator>
 ForwardIterator uninitialized_copy(InputIterator first, InputIterator last, ForwardIterator d_first) {
     typedef typename etl::iterator_traits<ForwardIterator>::value_type Value;
@@ -28,5 +28,6 @@ ForwardIterator uninitialized_copy(InputIterator first, InputIterator last, Forw
         throw;
     }
 }
+*/
 
 } // namespace etl
