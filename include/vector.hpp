@@ -38,6 +38,8 @@ struct vector_base {
 
     void destruct_at_end(pointer new_last) noexcept;
     void copy_assign_alloc(vector_base const& other);
+
+    void swap(vector_base& other);
 };
 
 template <typename T, typename A = allocator<T>>
@@ -92,23 +94,15 @@ public:
     const_reference operator[](size_type const n) const;
 
 private:
-    using base::allocator_;
-    using base::begin_;
-    using base::capacity_;
-    using base::end_;
-
     template <typename InputIterator>
     void assign(InputIterator first, InputIterator last);
 
     void destroy_elements() noexcept;
-
-    iterator       capacity_end() noexcept;
-    const_iterator capacity_end() const noexcept;
 };
 
 } // namespace etl
 
-// Implementation:
+// vector_base implementation:
 namespace etl {
 
 template <typename Type, typename Allocator>
@@ -156,20 +150,31 @@ void vector_base<Type, Allocator>::copy_assign_alloc(vector_base const& other) {
     allocator_ = other.allocator_;
 }
 
+template <typename Type, typename Allocator>
+void vector_base<Type, Allocator>::swap(vector_base& other) {
+    std::swap(other.begin_, begin_);
+    std::swap(other.end_, end_);
+    std::swap(other.capacity_, capacity_);
+}
+
+} // namespace etl
+// vector_base implementation end
+
+// vector implementation:
+namespace etl {
+
 template <typename T, typename A>
 vector<T, A>::vector(allocator_type const& allocator) noexcept : base(allocator, 4) {}
 
 template <typename T, typename A>
 vector<T, A>::vector(size_type const n, value_type const& value, allocator_type const& allocator) : base(allocator, n) {
-    pointer current;
     try {
-        pointer end = end_;
-        for (current = begin_; current != end; ++current) {
-            allocator_.construct(current, value);
+        for (size_type i = 0; i < n; ++i) {
+            base::allocator_.construct(base::end_++, value);
         }
     } catch (...) {
-        for (pointer it = begin_; it != current; ++it) {
-            allocator_.destroy(it);
+        while (base::end_-- > base::begin_) {
+            base::allocator_.destroy(base::end_);
         }
         throw;
     }
@@ -177,17 +182,16 @@ vector<T, A>::vector(size_type const n, value_type const& value, allocator_type 
 
 template <typename T, typename A>
 vector<T, A>::vector(vector const& other) : base(other.allocator_, other.size()) {
-    pointer first   = other.begin_;
-    pointer last    = other.end_;
-    pointer current = begin_;
-
     try {
-        for (; first != last; ++first, ++current) {
-            allocator_.construct(current, *last);
+        pointer first = other.begin_;
+        pointer last  = other.end_;
+
+        for (; first != last; ++first) {
+            base::allocator_.construct(base::end_++, *first);
         }
     } catch (...) {
-        for (pointer it = begin_; it != current; ++it) {
-            allocator_.destroy(it);
+        while (base::end_-- > base::begin_) {
+            base::allocator_.destroy(base::end_);
         }
         throw;
     }
@@ -209,26 +213,6 @@ vector<T, A>& vector<T, A>::operator=(vector const& other) {
         assign(other.begin_, other.end_);
     }
     return *this;
-
-    /*
-        if (capacity() < other.size()) {
-            vector tmp(other);
-            std::swap(*this, tmp);
-            return *this;
-        }
-
-        if (this == &other)
-            return *this;
-
-        base_.allocator_ = other.allocator_;
-        if (other.size() < size()) {
-            copy(other.begin(), other.end(), begin());
-            for (iterator it = begin() + other.size(); it != capacity_end(); ++it) {
-                it->~T();
-            }
-        } else {
-        }
-        */
 }
 
 template <typename T, typename A>
@@ -248,49 +232,40 @@ vector<T, A>::~vector() {
 
 template <typename T, typename A>
 typename vector<T, A>::iterator vector<T, A>::begin() noexcept {
-    return iterator(begin_);
+    return iterator(base::begin_);
 }
 template <typename T, typename A>
 typename vector<T, A>::const_iterator vector<T, A>::begin() const noexcept {
-    return const_iterator(begin_);
+    return const_iterator(base::begin_);
 }
 template <typename T, typename A>
 typename vector<T, A>::iterator vector<T, A>::end() noexcept {
-    return iterator(end_);
+    return iterator(base::end_);
 }
 template <typename T, typename A>
 typename vector<T, A>::const_iterator vector<T, A>::end() const noexcept {
-    return const_iterator(end_);
-}
-template <typename T, typename A>
-typename vector<T, A>::iterator vector<T, A>::capacity_end() noexcept {
-    return iterator(capacity_);
-}
-template <typename T, typename A>
-typename vector<T, A>::const_iterator vector<T, A>::capacity_end() const noexcept {
-    return const_iterator(capacity_);
+    return const_iterator(base::end_);
 }
 
 template <typename T, typename A>
 void vector<T, A>::destroy_elements() noexcept {
-    for (pointer it = begin_; it != capacity_; ++it) {
-        allocator_.destroy(it);
+    for (pointer it = base::begin_; it != base::capacity_; ++it) {
+        base::allocator_.destroy(it);
     }
-    capacity_ = begin_;
+    base::capacity_ = base::begin_;
 }
 
 template <typename T, typename A>
 void vector<T, A>::reserve(size_type const n) {
     // clang-format off
-    if (capacity() <= n) return;
-    base tmp(allocator_, n);
-    for (pointer it = tmp.begin_; it != end_; ++it) {
-        allocator_.construct(it, std::move(*begin_));
+    if (n <= capacity()) { return; }
+
+    base tmp(base::allocator_, n);
+    for (pointer it = base::begin_; it != base::end_; ++it) {
+        base::allocator_.construct(tmp.end_++, std::move(*it));
         it->~value_type();
     }
-    begin_    = tmp.begin_;
-    capacity_ = tmp.capacity_;
-    end_      = tmp.end_;
+    base::swap(tmp);
     // clang-format on
 }
 
@@ -304,23 +279,23 @@ void vector<T, A>::push_back(value_type const& value) {
     if (capacity() <= size()) {
         reserve(size() ? 2 * size() : 8);
     }
-    allocator_.construct(&begin_[size()], value);
-    ++end_;
+    base::allocator_.construct(&base::begin_[size()], value);
+    ++base::end_;
 }
 
 template <typename T, typename A>
 typename vector<T, A>::size_type vector<T, A>::size() const noexcept {
-    return static_cast<size_type>(end_ - begin_);
+    return static_cast<size_type>(base::end_ - base::begin_);
 }
 
 template <typename T, typename A>
 typename vector<T, A>::size_type vector<T, A>::capacity() const noexcept {
-    return capacity_ - begin_;
+    return base::capacity_ - base::begin_;
 }
 
 template <typename T, typename A>
 bool vector<T, A>::empty() const noexcept {
-    return end_ == begin_;
+    return base::end_ == base::begin_;
 }
 
 template <typename T, typename A>
@@ -332,7 +307,8 @@ typename vector<T, A>::reference vector<T, A>::operator[](size_type const n) {
 template <typename T, typename A>
 typename vector<T, A>::const_reference vector<T, A>::operator[](size_type const n) const {
     assert(n <= size());
-    return begin_[n];
+    return base::begin_[n];
 }
 
 } // namespace etl
+// vector implementation end
