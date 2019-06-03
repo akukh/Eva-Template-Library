@@ -16,14 +16,12 @@
 #include "../include/vector.hpp"
 
 int main() {
-    etl::vector<int> v1(10);
+    etl::vector<int> v1(3, 10);
     v1.push_back(5);
     v1.push_back(1);
     v1.push_back(3);
-    int c = v1.capacity();
-    int s = v1.size();
 
-    std::cout << c << s;
+    std::cout << v1[3] << ' ' << v1[4];
     etl::vector<int> v2(v1);
 
     std::vector<int>::const_iterator it;
