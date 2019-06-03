@@ -62,7 +62,7 @@ public:
     //  implement reverse iterators
 
     explicit vector(allocator_type const& allocator = A()) noexcept;
-    explicit vector(size_type const n, value_type const& value = T(), allocator_type const& allocator = A());
+    explicit vector(size_type const n, const_reference value = T(), allocator_type const& allocator = A());
 
     vector(vector const& other);
     vector& operator=(vector const& other);
@@ -84,19 +84,24 @@ public:
     bool empty() const noexcept;
 
     void reserve(size_type const n);
-    void resize(size_type const n, value_type const& value = T());
+    void resize(size_type const n, const_reference value = T());
 
     void clear() noexcept;
 
-    void push_back(value_type const& value);
+    template <typename InputIterator>
+    void assign(InputIterator first, InputIterator last);
+    void assign(size_type const count, const_reference value);
+
+    void push_back(const_reference value);
+
+    iterator insert(const_iterator position, value_type&& value);
+    iterator insert(const_iterator position, const_reference value);
+    iterator insert(const_iterator position, size_type const n, const_reference value);
 
     reference       operator[](size_type const n);
     const_reference operator[](size_type const n) const;
 
 private:
-    template <typename InputIterator>
-    void assign(InputIterator first, InputIterator last);
-
     void destroy_elements() noexcept;
 };
 
@@ -107,7 +112,7 @@ namespace etl {
 
 template <typename Type, typename Allocator>
 vector_base<Type, Allocator>::vector_base(allocator_type const& allocator, typename allocator_type::size_type const n)
-    : allocator_{allocator}, begin_{allocator_.allocate(n)}, capacity_{begin_ + n}, end_{begin_ + n} {}
+    : allocator_{allocator}, begin_{allocator_.allocate(n)}, capacity_{begin_ + n}, end_{begin_} {}
 
 template <typename Type, typename Allocator>
 vector_base<Type, Allocator>::~vector_base() {
@@ -167,7 +172,7 @@ template <typename T, typename A>
 vector<T, A>::vector(allocator_type const& allocator) noexcept : base(allocator, 4) {}
 
 template <typename T, typename A>
-vector<T, A>::vector(size_type const n, value_type const& value, allocator_type const& allocator) : base(allocator, n) {
+vector<T, A>::vector(size_type const n, const_reference value, allocator_type const& allocator) : base(allocator, n) {
     try {
         for (size_type i = 0; i < n; ++i) {
             base::allocator_.construct(base::end_++, value);
@@ -194,15 +199,6 @@ vector<T, A>::vector(vector const& other) : base(other.allocator_, other.size())
             base::allocator_.destroy(base::end_);
         }
         throw;
-    }
-}
-
-template <typename T, typename A>
-template <typename InputIterator>
-void vector<T, A>::assign(InputIterator first, InputIterator last) {
-    clear();
-    for (; first != last; ++first) {
-        push_back(*first);
     }
 }
 
@@ -275,13 +271,47 @@ void vector<T, A>::clear() noexcept {
 }
 
 template <typename T, typename A>
-void vector<T, A>::push_back(value_type const& value) {
+template <typename InputIterator>
+void vector<T, A>::assign(InputIterator first, InputIterator last) {
+    clear();
+    for (; first != last; ++first) {
+        push_back(*first);
+    }
+}
+
+template <typename T, typename A>
+void vector<T, A>::assign(size_type const count, const_reference value) {
+    // for ()
+}
+
+template <typename T, typename A>
+void vector<T, A>::push_back(const_reference value) {
     if (capacity() <= size()) {
         reserve(size() ? 2 * size() : 8);
     }
     base::allocator_.construct(&base::begin_[size()], value);
     ++base::end_;
 }
+
+template <typename T, typename A>
+vector<T, A>::iterator vector<T, A>::insert(const_iterator position, value_type&& value) {}
+
+template <typename T, typename A>
+vector<T, A>::iterator vector<T, A>::insert(const_iterator position, const_reference value) {
+    pointer p = base::begin_ + (position - begin());
+    if (base::end_ < base::capacity_) {
+        if (p == base::end_) {
+            base::allocator_.construct(&base::end_, value);
+            ++base::end_;
+        } else {
+        }
+    } else {
+        // reserve(size() ? 2 * size() : 8);
+    }
+}
+
+template <typename T, typename A>
+vector<T, A>::iterator vector<T, A>::insert(const_iterator position, size_type const n, const_reference value) {}
 
 template <typename T, typename A>
 typename vector<T, A>::size_type vector<T, A>::size() const noexcept {
@@ -300,13 +330,13 @@ bool vector<T, A>::empty() const noexcept {
 
 template <typename T, typename A>
 typename vector<T, A>::reference vector<T, A>::operator[](size_type const n) {
-    assert(n <= size());
+    assert(n < size());
     return const_cast<reference>(static_cast<vector<T, A> const&>(*this)[n]);
 }
 
 template <typename T, typename A>
 typename vector<T, A>::const_reference vector<T, A>::operator[](size_type const n) const {
-    assert(n <= size());
+    assert(n < size());
     return base::begin_[n];
 }
 
