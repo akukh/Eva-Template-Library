@@ -16,10 +16,14 @@
 #include "../include/vector.hpp"
 
 int main() {
-    etl::vector<int> v1(3, 10);
+    etl::vector<int> v1;
     v1.push_back(5);
     v1.push_back(1);
     v1.push_back(3);
+    v1.push_back(7);
+    v1.insert(v1.begin().base() + 2, 666);
+    v1.push_back(4);
+    v1.insert(v1.begin().base(), 777);
     for (std::size_t i = 0; i < v1.size(); ++i) {
         std::cout << v1[i] << ' ';
     }

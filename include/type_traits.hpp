@@ -314,8 +314,8 @@ struct allocator_traits {
     static pointer allocate(allocator_type& a, size_type n) { return a.allocate(n); }
     static void    deallocate(allocator_type& a, pointer p, size_type n) noexcept { a.deallocate(p, n); }
     
-    template <typename T>
-    static void destroy(allocator_type& a, T* p) { a.destroy(p); }
+    static void construct(allocator_type& a, pointer p, value_type const& value) { a.construct(p, value); }
+    static void destroy(allocator_type& a, pointer p) { a.destroy(p); }
 };
 
 } // namespace etl

@@ -94,15 +94,17 @@ public:
 
     void push_back(const_reference value);
 
-    iterator insert(const_iterator position, value_type&& value);
+    // iterator insert(const_iterator position, value_type&& value);
     iterator insert(const_iterator position, const_reference value);
-    iterator insert(const_iterator position, size_type const n, const_reference value);
+    // iterator insert(const_iterator position, size_type const n, const_reference value);
 
     reference       operator[](size_type const n);
     const_reference operator[](size_type const n) const;
 
 private:
     void destroy_elements() noexcept;
+
+    void move_range(pointer from_s, pointer from_e, pointer to);
 };
 
 } // namespace etl
@@ -244,14 +246,6 @@ typename vector<T, A>::const_iterator vector<T, A>::end() const noexcept {
 }
 
 template <typename T, typename A>
-void vector<T, A>::destroy_elements() noexcept {
-    for (pointer it = base::begin_; it != base::capacity_; ++it) {
-        base::allocator_.destroy(it);
-    }
-    base::capacity_ = base::begin_;
-}
-
-template <typename T, typename A>
 void vector<T, A>::reserve(size_type const n) {
     // clang-format off
     if (n <= capacity()) { return; }
@@ -292,26 +286,35 @@ void vector<T, A>::push_back(const_reference value) {
     base::allocator_.construct(&base::begin_[size()], value);
     ++base::end_;
 }
+/*
+template <typename T, typename A>
+vector<T, A>::iterator vector<T, A>::insert(const_iterator position, value_type&& value) {}*/
 
 template <typename T, typename A>
-vector<T, A>::iterator vector<T, A>::insert(const_iterator position, value_type&& value) {}
-
-template <typename T, typename A>
-vector<T, A>::iterator vector<T, A>::insert(const_iterator position, const_reference value) {
-    pointer p = base::begin_ + (position - begin());
+typename vector<T, A>::iterator vector<T, A>::insert(const_iterator position, const_reference value) {
+    pointer   p      = base::begin_ + (position - begin());
+    size_type offset = p - base::begin_;
     if (base::end_ < base::capacity_) {
         if (p == base::end_) {
-            base::allocator_.construct(&base::end_, value);
+            base::allocator_.construct(base::end_, value);
             ++base::end_;
         } else {
+            base::end_++;
+            move_range(base::end_, base::end_, p);
+            base::allocator_.construct(p, value);
         }
     } else {
-        // reserve(size() ? 2 * size() : 8);
+        reserve(size() ? 2 * size() : 8);
+        base::end_++;
+        p = base::begin_ + offset;
+        move_range(base::end_, base::end_, p);
+        base::allocator_.construct(p, value);
     }
+    return p;
 }
-
+/*
 template <typename T, typename A>
-vector<T, A>::iterator vector<T, A>::insert(const_iterator position, size_type const n, const_reference value) {}
+vector<T, A>::iterator vector<T, A>::insert(const_iterator position, size_type const n, const_reference value) {}*/
 
 template <typename T, typename A>
 typename vector<T, A>::size_type vector<T, A>::size() const noexcept {
@@ -338,6 +341,21 @@ template <typename T, typename A>
 typename vector<T, A>::const_reference vector<T, A>::operator[](size_type const n) const {
     assert(n < size());
     return base::begin_[n];
+}
+
+template <typename T, typename A>
+void vector<T, A>::destroy_elements() noexcept {
+    for (pointer it = base::begin_; it != base::capacity_; ++it) {
+        base::allocator_.destroy(it);
+    }
+    base::capacity_ = base::begin_;
+}
+
+template <typename T, typename A>
+void vector<T, A>::move_range(pointer from_s, pointer from_e, pointer to) {
+    while (from_e-- > to) {
+        base::allocator_.construct(from_s--, std::move(*from_e));
+    }
 }
 
 } // namespace etl

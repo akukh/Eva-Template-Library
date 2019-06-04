@@ -110,6 +110,10 @@ private:
 
     template <typename Iterator1, typename Iterator2>
     friend bool operator>(wrap_iter<Iterator1> const&, wrap_iter<Iterator2> const&) noexcept;
+
+    template <typename Iterator1, typename Iterator2>
+    friend typename wrap_iter<Iterator1>::difference_type operator-(wrap_iter<Iterator1> const& x, 
+                                                                    wrap_iter<Iterator2> const& y) noexcept;
 };
 
 } // namespace etl
@@ -193,6 +197,12 @@ inline bool operator!=(wrap_iter<Iterator1> const& x, wrap_iter<Iterator2> const
 template <typename Iterator1, typename Iterator2>
 inline bool operator>(wrap_iter<Iterator1> const& x, wrap_iter<Iterator2> const& y) noexcept {
     return y < x;
+}
+
+template <typename Iterator1, typename Iterator2>
+inline typename wrap_iter<Iterator1>::difference_type operator-(wrap_iter<Iterator1> const& x,
+                                                                wrap_iter<Iterator2> const& y) noexcept {
+    return x.base() - y.base();
 }
 
 } // namespace etl
