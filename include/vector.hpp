@@ -98,6 +98,9 @@ public:
     iterator insert(const_iterator position, const_reference value);
     // iterator insert(const_iterator position, size_type const n, const_reference value);
 
+    template <typename InputIterator>
+    iterator insert(const_iterator position, InputIterator first, InputIterator last);
+
     reference       operator[](size_type const n);
     const_reference operator[](size_type const n) const;
 
@@ -253,7 +256,7 @@ void vector<T, A>::reserve(size_type const n) {
     base tmp(base::allocator_, n);
     for (pointer it = base::begin_; it != base::end_; ++it) {
         base::allocator_.construct(tmp.end_++, std::move(*it));
-        it->~value_type();
+        base::allocator_.destroy(it);
     }
     base::swap(tmp);
     // clang-format on
@@ -292,29 +295,63 @@ vector<T, A>::iterator vector<T, A>::insert(const_iterator position, value_type&
 
 template <typename T, typename A>
 typename vector<T, A>::iterator vector<T, A>::insert(const_iterator position, const_reference value) {
-    pointer   p      = base::begin_ + (position - begin());
-    size_type offset = p - base::begin_;
+    difference_type offset = position - begin();
+    pointer         p      = base::begin_ + offset;
     if (base::end_ < base::capacity_) {
         if (p == base::end_) {
-            base::allocator_.construct(base::end_, value);
+            base::allocator_.construct(base::end_, std::move(value));
             ++base::end_;
         } else {
-            base::end_++;
+            ++base::end_;
             move_range(base::end_, base::end_, p);
-            base::allocator_.construct(p, value);
+            base::allocator_.construct(p, std::move(value));
         }
     } else {
-        reserve(size() ? 2 * size() : 8);
-        base::end_++;
-        p = base::begin_ + offset;
-        move_range(base::end_, base::end_, p);
-        base::allocator_.construct(p, value);
+        base tmp(base::allocator_, size() ? 2 * size() : 8);
+        for (pointer it = base::begin_; it != base::end_; ++it) {
+            if (it == p) {
+                base::allocator_.construct(tmp.end_++, std::move(value));
+            }
+            base::allocator_.construct(tmp.end_++, std::move(*it));
+            base::allocator_.destroy(it);
+        }
+        base::swap(tmp);
     }
-    return p;
+    return begin() + offset;
 }
 /*
 template <typename T, typename A>
 vector<T, A>::iterator vector<T, A>::insert(const_iterator position, size_type const n, const_reference value) {}*/
+
+template <typename T, typename A>
+template <typename InputIterator>
+typename vector<T, A>::iterator vector<T, A>::insert(const_iterator position, InputIterator first, InputIterator last) {
+    difference_type offset     = position - begin();
+    pointer         p          = base::begin_ + offset;
+    difference_type input_size = last - first;
+    difference_type free_space = base::capacity_ - base::end_;
+    if (input_size < free_space) {
+        base::end_ += input_size;
+        move_range(base::end_ + 1, base::end_, p);
+        for (; p != p + input_size && first != last; ++first) {
+            base::allocator_.construct(p++, std::move(*first));
+        }
+    }
+    difference_type new_size = input_size + size();
+    base            tmp(base::allocator_, new_size + 8);
+    for (pointer it = base::begin_; it != base::end_; ++it) {
+        if (it == p) {
+            for (; first != last; ++first) {
+                base::allocator_.construct(tmp.end_++, std::move(*first));
+            }
+        }
+        base::allocator_.construct(tmp.end_++, std::move(*it));
+        base::allocator_.destroy(first.base());
+        base::allocator_.destroy(it);
+    }
+    base::swap(tmp);
+    return begin() + offset;
+}
 
 template <typename T, typename A>
 typename vector<T, A>::size_type vector<T, A>::size() const noexcept {
@@ -355,6 +392,7 @@ template <typename T, typename A>
 void vector<T, A>::move_range(pointer from_s, pointer from_e, pointer to) {
     while (from_e-- > to) {
         base::allocator_.construct(from_s--, std::move(*from_e));
+        base::allocator_.destroy(from_e);
     }
 }
 

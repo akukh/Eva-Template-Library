@@ -80,6 +80,9 @@ struct wrap_iter {
     wrap_iter() noexcept;
     wrap_iter(iterator_type other) noexcept;
 
+    template <typename OtherIterator>
+    wrap_iter(wrap_iter<OtherIterator> const& other);
+
     iterator_type base() const noexcept;
 
     reference operator* () const noexcept;
@@ -91,13 +94,16 @@ struct wrap_iter {
     wrap_iter operator+(difference_type const n) const noexcept;
     wrap_iter operator-(difference_type const n) const noexcept;
 
-    wrap_iter& operator+=(difference_type const n) const noexcept;
-    wrap_iter& operator-=(difference_type const n) const noexcept;
+    wrap_iter& operator+=(difference_type const n) noexcept;
+    wrap_iter& operator-=(difference_type const n) noexcept;
 
     reference operator[](difference_type const n) const noexcept;
 
 private:
     iterator_type iterator_;
+
+    template <typename U> friend struct wrap_iter;
+    template <typename T, typename A> friend class vector;
 
     template <typename Iterator1, typename Iterator2>
     friend bool operator==(wrap_iter<Iterator1> const&, wrap_iter<Iterator2> const&) noexcept;
@@ -112,8 +118,12 @@ private:
     friend bool operator>(wrap_iter<Iterator1> const&, wrap_iter<Iterator2> const&) noexcept;
 
     template <typename Iterator1, typename Iterator2>
-    friend typename wrap_iter<Iterator1>::difference_type operator-(wrap_iter<Iterator1> const& x, 
-                                                                    wrap_iter<Iterator2> const& y) noexcept;
+    friend typename wrap_iter<Iterator1>::difference_type operator-(wrap_iter<Iterator1> const&, 
+                                                                    wrap_iter<Iterator2> const&) noexcept;
+
+    template <typename Iterator1>
+    friend wrap_iter<Iterator1> operator+(typename wrap_iter<Iterator1>::difference_type, 
+                                          wrap_iter<Iterator1>) noexcept;
 };
 
 } // namespace etl
@@ -126,6 +136,10 @@ wrap_iter<Iterator>::wrap_iter() noexcept : iterator_() {}
 
 template <typename Iterator>
 wrap_iter<Iterator>::wrap_iter(iterator_type other) noexcept : iterator_(other) {}
+
+template <typename Iterator>
+template <typename OtherIterator>
+wrap_iter<Iterator>::wrap_iter(wrap_iter<OtherIterator> const& other) : iterator_(other.base()) {}
 
 template <typename Iterator>
 typename wrap_iter<Iterator>::iterator_type wrap_iter<Iterator>::base() const noexcept {
@@ -152,12 +166,12 @@ wrap_iter<Iterator> wrap_iter<Iterator>::operator-(difference_type const n) cons
     return *this + (-n);
 }
 template <typename Iterator>
-wrap_iter<Iterator>& wrap_iter<Iterator>::operator+=(difference_type const n) const noexcept {
+wrap_iter<Iterator>& wrap_iter<Iterator>::operator+=(difference_type const n) noexcept {
     iterator_ += n;
     return *this;
 }
 template <typename Iterator>
-wrap_iter<Iterator>& wrap_iter<Iterator>::operator-=(difference_type const n) const noexcept {
+wrap_iter<Iterator>& wrap_iter<Iterator>::operator-=(difference_type const n) noexcept {
     *this += (-n); 
     return *this;
 }
@@ -203,6 +217,13 @@ template <typename Iterator1, typename Iterator2>
 inline typename wrap_iter<Iterator1>::difference_type operator-(wrap_iter<Iterator1> const& x,
                                                                 wrap_iter<Iterator2> const& y) noexcept {
     return x.base() - y.base();
+}
+
+template <typename Iterator1>
+inline wrap_iter<Iterator1> operator+(typename wrap_iter<Iterator1>::difference_type n, 
+                                      wrap_iter<Iterator1>                           x) noexcept {
+    x += n;
+    return x;
 }
 
 } // namespace etl
