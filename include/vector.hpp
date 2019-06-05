@@ -343,10 +343,10 @@ typename vector<T, A>::iterator vector<T, A>::insert(const_iterator position, In
         if (it == p) {
             for (; first != last; ++first) {
                 base::allocator_.construct(tmp.end_++, std::move(*first));
+                base::allocator_.destroy(first.base());
             }
         }
         base::allocator_.construct(tmp.end_++, std::move(*it));
-        base::allocator_.destroy(first.base());
         base::allocator_.destroy(it);
     }
     base::swap(tmp);
