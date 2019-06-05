@@ -341,7 +341,9 @@ typename vector<T, A>::iterator vector<T, A>::insert(const_iterator position, In
     base            tmp(base::allocator_, new_size + 8);
     for (pointer it = base::begin_; it != base::end_; ++it) {
         if (it == p) {
-            for (; first != last; ++first) {
+            for (; first != last; ++first) { // NOTE:
+                                             //  maybe it's better to call insert which counts copies, but firstable it
+                                             //  needs to implement.. ?
                 base::allocator_.construct(tmp.end_++, std::move(*first));
                 base::allocator_.destroy(first.base());
             }
