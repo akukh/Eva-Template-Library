@@ -107,7 +107,10 @@ public:
 private:
     void destroy_elements() noexcept;
 
-    void move_range(pointer from_s, pointer from_e, pointer to);
+    void move_range(pointer from, pointer to);
+
+    template <typename Filler = void (*)(pointer)>
+    void reserve_n_fill(size_type const n, const_pointer position, Filler filler = Filler());
 };
 
 } // namespace etl
@@ -235,31 +238,43 @@ template <typename T, typename A>
 typename vector<T, A>::iterator vector<T, A>::begin() noexcept {
     return iterator(base::begin_);
 }
+
 template <typename T, typename A>
 typename vector<T, A>::const_iterator vector<T, A>::begin() const noexcept {
     return const_iterator(base::begin_);
 }
+
 template <typename T, typename A>
 typename vector<T, A>::iterator vector<T, A>::end() noexcept {
     return iterator(base::end_);
 }
+
 template <typename T, typename A>
 typename vector<T, A>::const_iterator vector<T, A>::end() const noexcept {
     return const_iterator(base::end_);
 }
 
 template <typename T, typename A>
-void vector<T, A>::reserve(size_type const n) {
+template <typename Filler>
+void vector<T, A>::reserve_n_fill(size_type const n, const_pointer position, Filler filler) {
     // clang-format off
-    if (n <= capacity()) { return; }
+    if (capacity() > n) return;
 
     base tmp(base::allocator_, n);
     for (pointer it = base::begin_; it != base::end_; ++it) {
+        if (it == position)
+            filler(tmp.end_);
+
         base::allocator_.construct(tmp.end_++, std::move(*it));
         base::allocator_.destroy(it);
     }
     base::swap(tmp);
     // clang-format on
+}
+
+template <typename T, typename A>
+void vector<T, A>::reserve(size_type const n) {
+    reserve_n_fill(n, nullptr);
 }
 
 template <typename T, typename A>
@@ -295,27 +310,20 @@ vector<T, A>::iterator vector<T, A>::insert(const_iterator position, value_type&
 
 template <typename T, typename A>
 typename vector<T, A>::iterator vector<T, A>::insert(const_iterator position, const_reference value) {
-    difference_type offset = position - begin();
+    size_type const offset = position - begin();
     pointer         p      = base::begin_ + offset;
     if (base::end_ < base::capacity_) {
         if (p == base::end_) {
-            base::allocator_.construct(base::end_, std::move(value));
-            ++base::end_;
+            base::allocator_.construct(base::end_++, std::move(value));
         } else {
-            ++base::end_;
-            move_range(base::end_, base::end_, p);
+            move_range(++base::end_, p); // NOTE:
+                                         //  at least we have space for one element.
             base::allocator_.construct(p, std::move(value));
         }
     } else {
-        base tmp(base::allocator_, size() ? 2 * size() : 8);
-        for (pointer it = base::begin_; it != base::end_; ++it) {
-            if (it == p) {
-                base::allocator_.construct(tmp.end_++, std::move(value));
-            }
-            base::allocator_.construct(tmp.end_++, std::move(*it));
-            base::allocator_.destroy(it);
-        }
-        base::swap(tmp);
+        reserve_n_fill(size() ? 2 * size() : 8, p, [this, &value](auto& end) {
+            base::allocator_.construct(end++, value);
+        });
     }
     return begin() + offset;
 }
@@ -326,32 +334,27 @@ vector<T, A>::iterator vector<T, A>::insert(const_iterator position, size_type c
 template <typename T, typename A>
 template <typename InputIterator>
 typename vector<T, A>::iterator vector<T, A>::insert(const_iterator position, InputIterator first, InputIterator last) {
-    difference_type offset     = position - begin();
-    pointer         p          = base::begin_ + offset;
-    difference_type input_size = last - first;
-    difference_type free_space = base::capacity_ - base::end_;
-    if (input_size < free_space) {
-        base::end_ += input_size;
-        move_range(base::end_ + 1, base::end_, p);
-        for (; p != p + input_size && first != last; ++first) {
-            base::allocator_.construct(p++, std::move(*first));
-        }
-    }
-    difference_type new_size = input_size + size();
-    base            tmp(base::allocator_, new_size + 8);
-    for (pointer it = base::begin_; it != base::end_; ++it) {
-        if (it == p) {
-            for (; first != last; ++first) { // NOTE:
-                                             //  maybe it's better to call insert which counts copies, but firstable it
-                                             //  needs to implement.. ?
-                base::allocator_.construct(tmp.end_++, std::move(*first));
-                base::allocator_.destroy(first.base());
+    size_type const offset         = position - begin();
+    size_type const required_space = last - first;
+    size_type const free_space     = base::capacity_ - base::end_;
+    pointer         p              = base::begin_ + offset;
+    if (required_space < free_space) {
+        if (1 == required_space) {
+            insert(position, *first);
+        } else {
+            base::end_ += required_space;
+            move_range(base::end_, p);
+            for (; p != p + required_space && first != last; ++first) {
+                base::allocator_.construct(p++, std::move(*first));
             }
         }
-        base::allocator_.construct(tmp.end_++, std::move(*it));
-        base::allocator_.destroy(it);
+    } else {
+        reserve_n_fill(required_space + size() + 8, p, [this, &first, &last](auto end) {
+            for (; first != last; ++first) {
+                base::allocator_.construct(end++, std::move(*first));
+            }
+        });
     }
-    base::swap(tmp);
     return begin() + offset;
 }
 
@@ -391,10 +394,16 @@ void vector<T, A>::destroy_elements() noexcept {
 }
 
 template <typename T, typename A>
-void vector<T, A>::move_range(pointer from_s, pointer from_e, pointer to) {
-    while (from_e-- > to) {
-        base::allocator_.construct(from_s--, std::move(*from_e));
-        base::allocator_.destroy(from_e);
+void vector<T, A>::move_range(pointer from, pointer to) {
+    assert(from);
+    assert(to);
+
+    // TODO:
+    //  fix me, this not working if it needed to shift elements more than on 1 position.
+    pointer current = from;
+    while (from-- > to) {
+        base::allocator_.construct(current--, std::move(*from));
+        base::allocator_.destroy(from);
     }
 }
 
