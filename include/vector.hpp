@@ -107,7 +107,7 @@ public:
 private:
     void destroy_elements() noexcept;
 
-    void move_range(pointer from, pointer to);
+    void move_range_on(size_type const offset, pointer to);
 
     template <typename Filler = void (*)(pointer)>
     void reserve_n_fill(size_type const n, const_pointer position, Filler filler = Filler());
@@ -316,8 +316,8 @@ typename vector<T, A>::iterator vector<T, A>::insert(const_iterator position, co
         if (p == base::end_) {
             base::allocator_.construct(base::end_++, std::move(value));
         } else {
-            move_range(++base::end_, p); // NOTE:
-                                         //  at least we have space for one element.
+            move_range_on(1, p); // NOTE:
+                                 //  at least we have space for one element.
             base::allocator_.construct(p, std::move(value));
         }
     } else {
@@ -342,8 +342,7 @@ typename vector<T, A>::iterator vector<T, A>::insert(const_iterator position, In
         if (1 == required_space) {
             insert(position, *first);
         } else {
-            base::end_ += required_space;
-            move_range(base::end_, p);
+            move_range_on(required_space, p);
             for (; p != p + required_space && first != last; ++first) {
                 base::allocator_.construct(p++, std::move(*first));
             }
@@ -394,17 +393,24 @@ void vector<T, A>::destroy_elements() noexcept {
 }
 
 template <typename T, typename A>
-void vector<T, A>::move_range(pointer from, pointer to) {
-    assert(from);
+void vector<T, A>::move_range_on(size_type const offset, pointer to) {
     assert(to);
+    /*
+                      ↓ - from
+        +---+---+---+---+---+---+---+
+        | 5 | 1 | 3 | 7 | 0 | 0 | 0 |
+        +---+---+---+---+---+---+---+
+              ↑ - to              ↑ - last
+     */
 
-    // TODO:
-    //  fix me, this not working if it needed to shift elements more than on 1 position.
-    pointer current = from;
+    pointer from = base::end_;
+    pointer last = from + offset;
+
     while (from-- > to) {
-        base::allocator_.construct(current--, std::move(*from));
+        base::allocator_.construct(--last, std::move(*from));
         base::allocator_.destroy(from);
     }
+    base::end_ += offset;
 }
 
 } // namespace etl
