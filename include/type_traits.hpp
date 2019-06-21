@@ -30,47 +30,27 @@ struct enable_if<true, T> { typedef T type; };
 template <typename T>
 struct void_t { typedef void type; };
 
+template <typename T1, typename T2> struct is_same       : false_type {};
+template <typename T>               struct is_same<T, T> : true_type  {};
+
 //----------------------------------------------------------------------------------------------------------------------
-// Trait to check is some struct or class has a concrete field:
+// Is reference
 //----------------------------------------------------------------------------------------------------------------------
+namespace details {
+
+typedef char yes_type;
+struct       no_type { char padding[8]; };
+
+struct is_reference_impl {
+    template <typename T> static T&      check(int);
+    template <typename T> static no_type check(...);
+};
+
+} // namespace details 
+
 template <typename T>
-struct has_x_field {
-private:
-    struct two { char с[2]; };
-    template <typename C, C> struct ch_t;
-    // NOTE: if C has a member named x the second `test` function will be chosen,
-    // otherwise the one with the elipsis will be chosen.
-    template <typename C>             static two  test(...);
-    template <typename C, typename U> static char test(ch_t<U C::*, &C::x>* = 0);
-public:
-    static bool const value = sizeof(test<T>(0)) == 2;
-};
-
-//----------------------------------------------------------------------------------------------------------------------
-// Allocator
-//----------------------------------------------------------------------------------------------------------------------
-template <typename T>
-struct allocator;
-
-template <>
-struct allocator<void> {
-    typedef void*       pointer;
-    typedef void const* const_pointer;
-    typedef void        value_type;
-
-    template <typename U>
-    struct rebind { typedef allocator<U> other; };
-};
-
-template <>
-struct allocator<void const> {
-    typedef void const* pointer;
-    typedef void const* const_pointer;
-    typedef void const  value_type;
-
-    template <typename U>
-    struct rebind { typedef allocator<U> other; };
-};
+struct is_reference : integral_constant<bool, 
+    !is_same<decltype(details::is_reference_impl::check<T>(0)), details::no_type>::value> {};
 
 //----------------------------------------------------------------------------------------------------------------------
 // Remove reference
@@ -81,6 +61,27 @@ template <typename T> struct remove_reference<T&&> { typedef T type; };
 
 template <typename T>
 using remove_reference_t = typename remove_reference<T>::type;
+
+//----------------------------------------------------------------------------------------------------------------------
+// Add reference
+//----------------------------------------------------------------------------------------------------------------------
+template <typename T, bool = is_reference<T>::value> struct add_lvalue_reference_impl          { typedef T  type; };
+template <typename T                               > struct add_lvalue_reference_impl<T, true> { typedef T& type; };
+
+template <typename T> struct add_lvalue_reference { 
+    typedef typename add_lvalue_reference_impl<T>::type type; 
+};
+
+template <typename T> using add_lvalue_reference_t = typename add_lvalue_reference<T>::type;
+
+template <typename T, bool = is_reference<T>::value> struct add_rvalue_reference_impl          { typedef T   type; };
+template <typename T                               > struct add_rvalue_reference_impl<T, true> { typedef T&& type; };
+
+template <typename T> struct add_rvalue_reference {
+    typedef typename add_rvalue_reference_impl<T>::type type;
+};
+
+template <typename T> using add_rvalue_reference_t = typename add_rvalue_reference<T>::type;
 
 //----------------------------------------------------------------------------------------------------------------------
 // Pointer traits
@@ -139,28 +140,25 @@ struct has_pointer_type : false_type {};
 template <typename T>
 struct has_pointer_type<T, typename void_t<typename T::pointer>::type> : true_type {};
 
-namespace pointer_type_impl {
+namespace details {
 
 template <typename T, typename U, bool = has_pointer_type<U>::value>
-struct pointer_type {
+struct pointer_type_impl {
     typedef typename U::pointer type;
 };
 
 template <typename T, typename U>
-struct pointer_type<T, U, false> {
+struct pointer_type_impl<T, U, false> {
     typedef T* type;
 };
 
-} // namespace poiter_type_impl
+} // namespace details
 
 template <typename T, typename U>
 struct pointer_type {
-    typedef typename pointer_type_impl::pointer_type<T, typename remove_reference<U>::type>::type type;
+    typedef typename details::pointer_type_impl<T, typename remove_reference<U>::type>::type type;
 };
 
-//----------------------------------------------------------------------------------------------------------------------
-// Const pointer
-//----------------------------------------------------------------------------------------------------------------------
 template <typename T, typename U = void>
 struct has_const_pointer : false_type {};
 
@@ -193,11 +191,8 @@ typedef type_list<unsigned char,
             type_list<unsigned int, 
                 type_list<unsigned long, nat>
             >
-        > unsigned_types;
+         > unsigned_types;
 
-//----------------------------------------------------------------------------------------------------------------------
-// Find first
-//----------------------------------------------------------------------------------------------------------------------
 template <typename TypeList, size_t Size, bool = Size <= sizeof(typename TypeList::head)>
 struct find_first;
 
@@ -211,36 +206,29 @@ struct find_first<type_list<H, T>, Size, false> {
     typedef typename find_first<T, Size>::type type;
 };
 
-//----------------------------------------------------------------------------------------------------------------------
-// Make unsigned
-//----------------------------------------------------------------------------------------------------------------------
-namespace make_unsigned_impl {
+namespace details {
 
-template <typename T, bool = true /* is_integral<T>::value || is_enum<Tp>::value */>
-struct make_unsigned {};
+template <typename T, bool = true /* TODO: is_integral<T>::value || is_enum<Tp>::value */>
+struct make_unsigned_helper {};
 
 template <typename T>
-struct make_unsigned<T, true> {
+struct make_unsigned_helper<T, true> {
     typedef typename find_first<unsigned_types, sizeof(T)>::type type;
 };
 
-template <> struct make_unsigned<bool,          true> {};
-template <> struct make_unsigned<signed   int,  true> { typedef signed   int  type; };
-template <> struct make_unsigned<unsigned int,  true> { typedef unsigned int  type; };
-template <> struct make_unsigned<signed   long, true> { typedef signed   long type; };
-template <> struct make_unsigned<unsigned long, true> { typedef unsigned long type; };
+template <> struct make_unsigned_helper<bool,          true> {};
+template <> struct make_unsigned_helper<signed   int,  true> { typedef signed   int  type; };
+template <> struct make_unsigned_helper<unsigned int,  true> { typedef unsigned int  type; };
+template <> struct make_unsigned_helper<signed   long, true> { typedef signed   long type; };
+template <> struct make_unsigned_helper<unsigned long, true> { typedef unsigned long type; };
 
 } // namespace make_unsigned_impl
 
-
 template <typename T>
 struct make_unsigned {
-    typedef typename make_unsigned_impl::make_unsigned<T>::type type;
+    typedef typename details::make_unsigned_helper<T>::type type;
 };
 
-//----------------------------------------------------------------------------------------------------------------------
-// Size type
-//----------------------------------------------------------------------------------------------------------------------
 template <typename T, typename U = void>
 struct has_size_type : false_type {};
 
@@ -258,64 +246,60 @@ struct size_type<Allocator, DiffType, true> {
 };
 
 //----------------------------------------------------------------------------------------------------------------------
-// Difference type
+// Declval
 //----------------------------------------------------------------------------------------------------------------------
-template <typename T, typename U = void>
-struct has_difference_type : false_type {};
 
 template <typename T>
-struct has_difference_type<T, typename void_t<typename T::difference_type>::type> : true_type {};
-
-template <typename Pointer, bool = has_difference_type<Pointer>::value>
-struct pointer_traits_difference_type {
-    typedef ptrdiff_t type;
-};
-
-template <typename Pointer>
-struct pointer_traits_difference_type<Pointer, true> {
-    typedef typename Pointer::difference_type type;
-};
-
-template <class Allocator, class Pointer, bool = has_difference_type<Allocator>::value>
-struct alloc_traits_difference_type {
-    typedef typename pointer_traits<Pointer>::difference_type type;
-};
-
-template <class Allocator, class Pointer>
-struct alloc_traits_difference_type<Allocator, Pointer, true> {
-    typedef typename Allocator::difference_type type;
-};
+typename add_rvalue_reference<T>::type declval() noexcept;
 
 //----------------------------------------------------------------------------------------------------------------------
-// Allocator traits
+// Is convertible
 //----------------------------------------------------------------------------------------------------------------------
-template <typename Allocator>
-struct allocator_traits {
-    typedef Allocator                           allocator_type;
-    typedef typename allocator_type::value_type value_type;
+namespace details {
 
-    typedef typename pointer_type<value_type, allocator_type>::type           pointer;
-    typedef typename const_pointer<value_type, pointer, allocator_type>::type const_pointer;
+template <typename T1, typename T2>
+struct is_convertible_helper {
+private:
+    template <typename U> static yes_type is_convertible_check(U const &);
+    template <typename U> static no_type  is_convertible_check(...);
 
-    typedef typename alloc_traits_difference_type<allocator_type, pointer>::type difference_type;
-    typedef typename size_type<allocator_type, difference_type>::type            size_type;
+public:
+    enum { value = sizeof(is_convertible_check<T2>(declval<T1>())) - 1 };
+};
 
-    // TODO:
-    //  complete implementation
-#if 0
-    template <typename T> struct rebind_alloc {
-        typedef typename allocator_traits_rebind<allocator_type, T>::type other;
-    };
-    template <typename T> struct rebind_traits {
-        typedef allocator_traits<typename rebind_alloc<T>::other> other;
-    };
-#endif
+template <typename T>
+struct is_convertible_helper<T, T> {
+private:
+    template <typename U> static yes_type is_convertible_check(U const &);
+    template <typename U> static no_type  is_convertible_check(...);
 
-    static pointer allocate(allocator_type& a, size_type n) { return a.allocate(n); }
-    static void    deallocate(allocator_type& a, pointer p, size_type n) noexcept { a.deallocate(p, n); }
+public:
+    enum { value = sizeof(is_convertible_check<T>(declval<T>())) - 1 };
+};
+
+} // namespace details
+
+template <typename T1, typename T2> 
+struct is_convertible : integral_constant<bool, details::is_convertible_helper<T1, T2>::value> {};
+
+//----------------------------------------------------------------------------------------------------------------------
+// Trait to check is some struct or class has a concrete field:
+//----------------------------------------------------------------------------------------------------------------------
+namespace details {
+
+template <typename T>
+struct has_x_field {
+private:
+    template <typename C, C> struct ch_t;
+    // NOTE: if C has a member named x the second `test` function will be chosen,
+    //  otherwise the one with the elipsis will be chosen.
+    template <typename C, typename U> static yes_type has_x_field_check(ch_t<U C::*, &C::x>* = 0);
+    template <typename C>             static no_type  has_x_field_check(...);
     
-    static void construct(allocator_type& a, pointer p, value_type const& value) { a.construct(p, value); }
-    static void destroy(allocator_type& a, pointer p) { a.destroy(p); }
+public:
+    static bool const value = sizeof(has_x_field_check<T>(0)) == 2;
 };
+
+}
 
 } // namespace etl

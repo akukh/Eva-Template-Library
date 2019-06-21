@@ -2,7 +2,7 @@
 #include "algorithm.hpp"
 #include "allocator.hpp"
 #include "iterator.hpp"
-#include "type_traits.hpp"
+#include "memory.hpp"
 
 namespace etl {
 
@@ -96,10 +96,15 @@ public:
 
     // iterator insert(const_iterator position, value_type&& value);
     iterator insert(const_iterator position, const_reference value);
-    // iterator insert(const_iterator position, size_type const n, const_reference value);
+    iterator insert(const_iterator position, size_type const count, const_reference value);
 
+    // clang-format off
     template <typename InputIterator>
-    iterator insert(const_iterator position, InputIterator first, InputIterator last);
+    typename enable_if<
+        is_input_iterator<InputIterator>::value, 
+        iterator
+    >::type insert(const_iterator position, InputIterator first, InputIterator last);
+    // clang-format on
 
     reference       operator[](size_type const n);
     const_reference operator[](size_type const n) const;
@@ -298,11 +303,14 @@ void vector<T, A>::assign(size_type const count, const_reference value) {
 
 template <typename T, typename A>
 void vector<T, A>::push_back(const_reference value) {
+    insert(base::end_, value);
+    /*
     if (capacity() <= size()) {
         reserve(size() ? 2 * size() : 8);
     }
     base::allocator_.construct(&base::begin_[size()], value);
     ++base::end_;
+    */
 }
 /*
 template <typename T, typename A>
@@ -312,12 +320,12 @@ template <typename T, typename A>
 typename vector<T, A>::iterator vector<T, A>::insert(const_iterator position, const_reference value) {
     size_type const offset = position - begin();
     pointer         p      = base::begin_ + offset;
+
     if (base::end_ < base::capacity_) {
         if (p == base::end_) {
             base::allocator_.construct(base::end_++, std::move(value));
         } else {
-            move_range_on(1, p); // NOTE:
-                                 //  at least we have space for one element.
+            move_range_on(1, p);
             base::allocator_.construct(p, std::move(value));
         }
     } else {
@@ -327,28 +335,55 @@ typename vector<T, A>::iterator vector<T, A>::insert(const_iterator position, co
     }
     return begin() + offset;
 }
-/*
-template <typename T, typename A>
-vector<T, A>::iterator vector<T, A>::insert(const_iterator position, size_type const n, const_reference value) {}*/
 
 template <typename T, typename A>
+typename vector<T, A>::iterator vector<T, A>::insert(const_iterator  position,
+                                                     size_type const count,
+                                                     const_reference value) {
+    size_type const offset     = position - begin();
+    size_type const free_space = base::capacity_ - base::end_;
+    pointer         p          = base::begin_ + offset;
+
+    if (1 == count)
+        return insert(position, value);
+
+    if (count < free_space) {
+        move_range_on(count, p);
+        for (; p != p + count; ++p) {
+            base::allocator_.construct(p, std::move(value));
+        }
+    } else {
+        reserve_n_fill(count + size() + 8, p, [this, &p, &count, &value](auto& end) {
+            for (pointer it = p; it != p + count; ++it) {
+                base::allocator_.construct(end++, std::move(value));
+            }
+        });
+    }
+    return begin() + offset;
+}
+
+// clang-format off
+template <typename T, typename A>
 template <typename InputIterator>
-typename vector<T, A>::iterator vector<T, A>::insert(const_iterator position, InputIterator first, InputIterator last) {
+typename enable_if <
+    is_input_iterator<InputIterator>::value, 
+    typename vector<T, A>::iterator
+>::type vector<T, A>::insert(const_iterator position, InputIterator first, InputIterator last) {
     size_type const offset         = position - begin();
     size_type const required_space = last - first;
     size_type const free_space     = base::capacity_ - base::end_;
     pointer         p              = base::begin_ + offset;
+
+    if (1 == required_space)
+        return insert(position, *first);
+
     if (required_space < free_space) {
-        if (1 == required_space) {
-            insert(position, *first);
-        } else {
-            move_range_on(required_space, p);
-            for (; p != p + required_space && first != last; ++first) {
-                base::allocator_.construct(p++, std::move(*first));
-            }
+        move_range_on(required_space, p);
+        for (; p != p + required_space && first != last; ++first) {
+            base::allocator_.construct(p++, std::move(*first));
         }
     } else {
-        reserve_n_fill(required_space + size() + 8, p, [this, &first, &last](auto end) {
+        reserve_n_fill(required_space + size() + 8, p, [this, &first, &last](auto& end) {
             for (; first != last; ++first) {
                 base::allocator_.construct(end++, std::move(*first));
             }
@@ -356,6 +391,7 @@ typename vector<T, A>::iterator vector<T, A>::insert(const_iterator position, In
     }
     return begin() + offset;
 }
+// clang-format on
 
 template <typename T, typename A>
 typename vector<T, A>::size_type vector<T, A>::size() const noexcept {

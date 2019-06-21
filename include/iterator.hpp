@@ -1,6 +1,8 @@
 #pragma once
 #include <cstddef>
 
+#include "type_traits.hpp"
+
 // clang-format off
 namespace etl {
 
@@ -20,13 +22,13 @@ public:
     static bool const value = sizeof(test<T>(0)) == 1;
 };
 
-namespace iterator_traits_impl {
+namespace details {
 
 template <typename Iterator, bool>
-struct iterator_traits_impl {};
+struct iterator_traits_basic_impl {};
 
 template <typename Iterator>
-struct iterator_traits_impl<Iterator, true> {
+struct iterator_traits_basic_impl<Iterator, true> {
     typedef typename Iterator::difference_type   difference_type;
     typedef typename Iterator::value_type        value_type;
     typedef typename Iterator::pointer           pointer;
@@ -35,18 +37,18 @@ struct iterator_traits_impl<Iterator, true> {
 };
 
 template <typename Iterator, bool>
-struct iterator_traits {};
+struct iterator_traits_impl {};
 
 template <typename Iterator>
-struct iterator_traits<Iterator, true> : iterator_traits_impl<Iterator,
-                                                              // TODO:
-                                                              //  implement is_convertible, now here just stab
-                                                              true> {};
+struct iterator_traits_impl<Iterator, true> : iterator_traits_basic_impl<Iterator,
+                                                                        // TODO:
+                                                                        //  implement is_convertible, now here just stab
+                                                                        true> {};
 
-} // namespace iterator_traits_impl
+} // namespace details
 
 template <typename Iterator>
-struct iterator_traits : iterator_traits_impl::iterator_traits<Iterator, has_iterator_category<Iterator>::value> {};
+struct iterator_traits : details::iterator_traits_impl<Iterator, has_iterator_category<Iterator>::value> {};
 
 template <typename T>
 struct iterator_traits<T*> {
@@ -56,6 +58,17 @@ struct iterator_traits<T*> {
     typedef T&                         reference;
     typedef random_access_iterator_tag iterator_category;
 };
+
+template <typename T, typename U, bool = has_iterator_category<iterator_traits<T> >::value>
+struct has_iterator_category_convertible_to
+    : public integral_constant<bool, is_convertible<typename iterator_traits<T>::iterator_category, U>::value>
+{};
+
+template <typename T, typename U>
+struct has_iterator_category_convertible_to<T, U, false> : public false_type {};
+
+template <typename T>
+struct is_input_iterator : public has_iterator_category_convertible_to<T, input_iterator_tag> {};
 
 template <typename Category, typename T, typename Distance = ptrdiff_t, typename Pointer = T*, typename Reference = T&>
 struct iterator {

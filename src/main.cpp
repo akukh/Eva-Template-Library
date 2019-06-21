@@ -24,8 +24,9 @@ int main() {
     v1.push_back(3);
     v1.push_back(7);
     v1.insert(v1.begin() + 2, 666);
-    // v1.push_back(4);
-    v1.insert(v1.begin(), 777);
+
+    v1.push_back(4);
+    v1.insert(v1.begin(), 3, 777);
 
     for (std::size_t i = 0; i < v1.size(); ++i) {
         std::cout << v1[i] << ' ';
