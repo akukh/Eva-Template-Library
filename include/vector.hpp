@@ -1,4 +1,6 @@
 #pragma once
+#include <cassert>
+
 #include "algorithm.hpp"
 #include "allocator.hpp"
 #include "iterator.hpp"
@@ -365,10 +367,8 @@ typename vector<T, A>::iterator vector<T, A>::insert(const_iterator  position,
 // clang-format off
 template <typename T, typename A>
 template <typename InputIterator>
-typename enable_if <
-    is_input_iterator<InputIterator>::value, 
-    typename vector<T, A>::iterator
->::type vector<T, A>::insert(const_iterator position, InputIterator first, InputIterator last) {
+typename enable_if <is_input_iterator<InputIterator>::value, typename vector<T, A>::iterator>::type 
+vector<T, A>::insert(const_iterator position, InputIterator first, InputIterator last) {
     size_type const offset         = position - begin();
     size_type const required_space = last - first;
     size_type const free_space     = base::capacity_ - base::end_;

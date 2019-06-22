@@ -101,11 +101,11 @@ struct pointer_trairs_element_type {
 template <typename T, typename U>
 struct has_rebind {
 private:
-    struct two { char с[2]; };
-    template <typename C> static two  test(...);
-    template <typename C> static char test(typename C::template rebind<C>* = 0);
+    template <typename C> static details::no_type  has_rebind_check(...);
+    template <typename C> static details::yes_type has_rebind_check(typename C::template rebind<C>* = 0);
+
 public:
-    static bool const value = sizeof(test<T>(0)) == 1;
+    static bool const value = sizeof(has_rebind_check<T>(0)) == 1;
 };
 
 template <typename T, typename U, bool = has_rebind<T, U>::value>
@@ -264,7 +264,7 @@ private:
     template <typename U> static no_type  is_convertible_check(...);
 
 public:
-    enum { value = sizeof(is_convertible_check<T2>(declval<T1>())) - 1 };
+    static bool const value = sizeof(is_convertible_check<T2>(declval<T1>())) == 1;
 };
 
 template <typename T>
@@ -274,7 +274,7 @@ private:
     template <typename U> static no_type  is_convertible_check(...);
 
 public:
-    enum { value = sizeof(is_convertible_check<T>(declval<T>())) - 1 };
+    static bool const value = sizeof(is_convertible_check<T>(declval<T>())) == 1;
 };
 
 } // namespace details

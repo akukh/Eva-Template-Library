@@ -15,11 +15,11 @@ struct random_access_iterator_tag : public bidirectional_iterator_tag {};
 template <typename T>
 struct has_iterator_category {
 private:
-    struct two { char с[2]; };
-    template <typename U> static two  test(...);
-    template <typename U> static char test(typename U::iterator_category* = 0);
+    template <typename U> static details::no_type  has_iterator_category_check(...);
+    template <typename U> static details::yes_type has_iterator_category_check(typename U::iterator_category* = 0);
+
 public:
-    static bool const value = sizeof(test<T>(0)) == 1;
+    static bool const value = sizeof(has_iterator_category_check<T>(0)) == 1;
 };
 
 namespace details {
