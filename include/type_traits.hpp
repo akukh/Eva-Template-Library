@@ -191,7 +191,7 @@ typedef type_list<unsigned char,
             type_list<unsigned int, 
                 type_list<unsigned long, nat>
             >
-         > unsigned_types;
+        > unsigned_types;
 
 template <typename TypeList, size_t Size, bool = Size <= sizeof(typename TypeList::head)>
 struct find_first;
@@ -260,7 +260,7 @@ namespace details {
 template <typename T1, typename T2>
 struct is_convertible_helper {
 private:
-    template <typename U> static yes_type is_convertible_check(U const &);
+    template <typename U> static yes_type is_convertible_check(U const&);
     template <typename U> static no_type  is_convertible_check(...);
 
 public:
@@ -270,7 +270,7 @@ public:
 template <typename T>
 struct is_convertible_helper<T, T> {
 private:
-    template <typename U> static yes_type is_convertible_check(U const &);
+    template <typename U> static yes_type is_convertible_check(U const&);
     template <typename U> static no_type  is_convertible_check(...);
 
 public:

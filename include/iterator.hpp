@@ -88,8 +88,6 @@ struct wrap_iter {
     typedef typename iterator_traits<iterator_type>::pointer           pointer;
     typedef typename iterator_traits<iterator_type>::reference         reference;
 
-    // TODO:
-    //  implement rest ctors
     wrap_iter() noexcept;
     wrap_iter(iterator_type other) noexcept;
 
@@ -136,7 +134,7 @@ private:
 
     template <typename Iterator1>
     friend wrap_iter<Iterator1> operator+(typename wrap_iter<Iterator1>::difference_type, 
-                                          wrap_iter<Iterator1>) noexcept;
+                                                   wrap_iter<Iterator1>) noexcept;
 };
 
 } // namespace etl
