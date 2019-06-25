@@ -1,7 +1,6 @@
 #pragma once
 #include <cassert>
 
-#include "algorithm.hpp"
 #include "allocator.hpp"
 #include "iterator.hpp"
 #include "memory.hpp"
