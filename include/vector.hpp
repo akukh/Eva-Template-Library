@@ -261,21 +261,18 @@ typename vector<T, A>::const_iterator vector<T, A>::end() const noexcept {
 }
 
 template <typename T, typename A>
-template <typename Filler>
-void vector<T, A>::reserve_n_fill(size_type const n, const_pointer position, Filler filler) {
-    // clang-format off
-    if (capacity() > n) return;
+typename vector<T, A>::size_type vector<T, A>::size() const noexcept {
+    return static_cast<size_type>(base::end_ - base::begin_);
+}
 
-    base tmp(base::allocator_, n);
-    for (pointer it = base::begin_; it != base::end_; ++it) {
-        if (it == position)
-            filler(tmp.end_);
+template <typename T, typename A>
+typename vector<T, A>::size_type vector<T, A>::capacity() const noexcept {
+    return base::capacity_ - base::begin_;
+}
 
-        base::allocator_.construct(tmp.end_++, std::move(*it));
-        base::allocator_.destroy(it);
-    }
-    base::swap(tmp);
-    // clang-format on
+template <typename T, typename A>
+bool vector<T, A>::empty() const noexcept {
+    return base::end_ == base::begin_;
 }
 
 template <typename T, typename A>
@@ -387,21 +384,6 @@ typename enable_if <
 // clang-format on
 
 template <typename T, typename A>
-typename vector<T, A>::size_type vector<T, A>::size() const noexcept {
-    return static_cast<size_type>(base::end_ - base::begin_);
-}
-
-template <typename T, typename A>
-typename vector<T, A>::size_type vector<T, A>::capacity() const noexcept {
-    return base::capacity_ - base::begin_;
-}
-
-template <typename T, typename A>
-bool vector<T, A>::empty() const noexcept {
-    return base::end_ == base::begin_;
-}
-
-template <typename T, typename A>
 typename vector<T, A>::reference vector<T, A>::operator[](size_type const n) {
     assert(n < size());
     return const_cast<reference>(static_cast<vector<T, A> const&>(*this)[n]);
@@ -440,6 +422,24 @@ void vector<T, A>::move_range_on(size_type const offset, pointer to) {
         base::allocator_.destroy(from);
     }
     base::end_ += offset;
+}
+
+template <typename T, typename A>
+template <typename Filler>
+void vector<T, A>::reserve_n_fill(size_type const n, const_pointer position, Filler filler) {
+    // clang-format off
+    if (capacity() > n) return;
+
+    base tmp(base::allocator_, n);
+    for (pointer it = base::begin_; it != base::end_; ++it) {
+        if (it == position)
+            filler(tmp.end_);
+
+        base::allocator_.construct(tmp.end_++, std::move(*it));
+        base::allocator_.destroy(it);
+    }
+    base::swap(tmp);
+    // clang-format on
 }
 
 } // namespace etl

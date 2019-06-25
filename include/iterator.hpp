@@ -134,7 +134,7 @@ private:
 
     template <typename Iterator1>
     friend wrap_iter<Iterator1> operator+(typename wrap_iter<Iterator1>::difference_type, 
-                                                   wrap_iter<Iterator1>) noexcept;
+                                          wrap_iter<Iterator1>) noexcept;
 };
 
 } // namespace etl
