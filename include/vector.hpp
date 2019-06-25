@@ -293,26 +293,18 @@ template <typename T, typename A>
 template <typename InputIterator>
 void vector<T, A>::assign(InputIterator first, InputIterator last) {
     clear();
-    for (; first != last; ++first) {
-        push_back(*first);
-    }
+    insert(begin(), first, last);
 }
 
 template <typename T, typename A>
 void vector<T, A>::assign(size_type const count, const_reference value) {
-    // for ()
+    clear();
+    insert(begin(), count, value);
 }
 
 template <typename T, typename A>
 void vector<T, A>::push_back(const_reference value) {
     insert(base::end_, value);
-    /*
-    if (capacity() <= size()) {
-        reserve(size() ? 2 * size() : 8);
-    }
-    base::allocator_.construct(&base::begin_[size()], value);
-    ++base::end_;
-    */
 }
 /*
 template <typename T, typename A>

@@ -36,12 +36,12 @@ int main() {
     v1.reserve(16);
     v1.insert(v1.begin() + 2, v2.begin(), v2.end());
 
+    int arr[]{501, 502, 503};
+    v1.insert(v1.begin(), arr, arr + 3);
+
     for (std::size_t i = 0; i < v1.size(); ++i) {
         std::cout << v1[i] << ' ';
     }
     std::cout << std::endl;
-
-    std::vector<int>::const_iterator it;
-
 #endif
 }

@@ -19,7 +19,7 @@ private:
     template <typename U> static details::yes_type has_iterator_category_check(typename U::iterator_category* = 0);
 
 public:
-    static bool const value = sizeof(has_iterator_category_check<T>(0)) == 1;
+    enum { value = sizeof(has_iterator_category_check<T>(0)) == 1 };
 };
 
 namespace details {
@@ -40,10 +40,11 @@ template <typename Iterator, bool>
 struct iterator_traits_impl {};
 
 template <typename Iterator>
-struct iterator_traits_impl<Iterator, true> : iterator_traits_basic_impl<Iterator,
-                                                                        // TODO:
-                                                                        //  implement is_convertible, now here just stab
-                                                                        true> {};
+struct iterator_traits_impl<Iterator, true> 
+    : iterator_traits_basic_impl<Iterator,
+                                is_convertible<typename Iterator::iterator_category, input_iterator_tag>::value ||
+                                is_convertible<typename Iterator::iterator_category, output_iterator_tag>::value
+                                > {};
 
 } // namespace details
 
@@ -52,23 +53,22 @@ struct iterator_traits : details::iterator_traits_impl<Iterator, has_iterator_ca
 
 template <typename T>
 struct iterator_traits<T*> {
-    typedef ptrdiff_t                  difference_type;
-    typedef T                          value_type; // typedef typename remove_cv<_Tp>::type value_type;
-    typedef T*                         pointer;
-    typedef T&                         reference;
-    typedef random_access_iterator_tag iterator_category;
+    typedef ptrdiff_t                   difference_type;
+    typedef typename remove_cv<T>::type value_type;
+    typedef T*                          pointer;
+    typedef T&                          reference;
+    typedef random_access_iterator_tag  iterator_category;
 };
 
 template <typename T, typename U, bool = has_iterator_category<iterator_traits<T> >::value>
 struct has_iterator_category_convertible_to
-    : public integral_constant<bool, is_convertible<typename iterator_traits<T>::iterator_category, U>::value>
-{};
+    : integral_constant<bool, is_convertible<typename iterator_traits<T>::iterator_category, U>::value> {};
 
 template <typename T, typename U>
-struct has_iterator_category_convertible_to<T, U, false> : public false_type {};
+struct has_iterator_category_convertible_to<T, U, false> : false_type {};
 
 template <typename T>
-struct is_input_iterator : public has_iterator_category_convertible_to<T, input_iterator_tag> {};
+struct is_input_iterator : has_iterator_category_convertible_to<T, input_iterator_tag> {};
 
 template <typename Category, typename T, typename Distance = ptrdiff_t, typename Pointer = T*, typename Reference = T&>
 struct iterator {

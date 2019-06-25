@@ -39,7 +39,7 @@ template <typename T>               struct is_same<T, T> : true_type  {};
 namespace details {
 
 typedef char yes_type;
-struct       no_type { char padding[8]; };
+typedef char(&no_type)[8];
 
 struct is_reference_impl {
     template <typename T> static T&      check(int);
@@ -63,6 +63,20 @@ template <typename T>
 using remove_reference_t = typename remove_reference<T>::type;
 
 //----------------------------------------------------------------------------------------------------------------------
+// Remove const volatile
+//----------------------------------------------------------------------------------------------------------------------
+template <typename T> struct remove_const          { typedef T type; };
+template <typename T> struct remove_const<T const> { typedef T type; };
+
+template <typename T> struct remove_volatile             { typedef T type; };
+template <typename T> struct remove_volatile<T volatile> { typedef T type; };
+
+template <typename T>
+struct remove_cv {
+    typedef typename remove_volatile<typename remove_const<T>::type>::type type; 
+};
+
+//----------------------------------------------------------------------------------------------------------------------
 // Add reference
 //----------------------------------------------------------------------------------------------------------------------
 template <typename T, bool = is_reference<T>::value> struct add_lvalue_reference_impl          { typedef T  type; };
@@ -82,6 +96,31 @@ template <typename T> struct add_rvalue_reference {
 };
 
 template <typename T> using add_rvalue_reference_t = typename add_rvalue_reference<T>::type;
+
+//----------------------------------------------------------------------------------------------------------------------
+// Is integral
+//----------------------------------------------------------------------------------------------------------------------
+namespace details {
+
+template <typename T> struct is_integral_helper                     : false_type {};
+template <>           struct is_integral_helper<bool>               : true_type  {};
+template <>           struct is_integral_helper<char>               : true_type  {};
+template <>           struct is_integral_helper<signed char>        : true_type  {};
+template <>           struct is_integral_helper<unsigned char>      : true_type  {};
+template <>           struct is_integral_helper<wchar_t>            : true_type  {};
+template <>           struct is_integral_helper<short>              : true_type  {};
+template <>           struct is_integral_helper<unsigned short>     : true_type  {};
+template <>           struct is_integral_helper<int>                : true_type  {};
+template <>           struct is_integral_helper<unsigned int>       : true_type  {};
+template <>           struct is_integral_helper<long>               : true_type  {};
+template <>           struct is_integral_helper<unsigned long>      : true_type  {};
+template <>           struct is_integral_helper<long long>          : true_type  {};
+template <>           struct is_integral_helper<unsigned long long> : true_type  {};
+
+} // namespace details
+
+template <typename T>
+struct is_integral : details::is_integral_helper<typename remove_cv<T>::type> {};
 
 //----------------------------------------------------------------------------------------------------------------------
 // Pointer traits
@@ -105,7 +144,7 @@ private:
     template <typename C> static details::yes_type has_rebind_check(typename C::template rebind<C>* = 0);
 
 public:
-    static bool const value = sizeof(has_rebind_check<T>(0)) == 1;
+    enum { value = sizeof(has_rebind_check<T>(0)) == 1 };
 };
 
 template <typename T, typename U, bool = has_rebind<T, U>::value>
@@ -208,7 +247,7 @@ struct find_first<type_list<H, T>, Size, false> {
 
 namespace details {
 
-template <typename T, bool = true /* TODO: is_integral<T>::value || is_enum<Tp>::value */>
+template <typename T, bool = is_integral<T>::value /* TODO: || is_enum<T>::value */>
 struct make_unsigned_helper {};
 
 template <typename T>
@@ -216,11 +255,13 @@ struct make_unsigned_helper<T, true> {
     typedef typename find_first<unsigned_types, sizeof(T)>::type type;
 };
 
-template <> struct make_unsigned_helper<bool,          true> {};
-template <> struct make_unsigned_helper<signed   int,  true> { typedef signed   int  type; };
-template <> struct make_unsigned_helper<unsigned int,  true> { typedef unsigned int  type; };
-template <> struct make_unsigned_helper<signed   long, true> { typedef signed   long type; };
-template <> struct make_unsigned_helper<unsigned long, true> { typedef unsigned long type; };
+template <> struct make_unsigned_helper<bool              , true> {};
+template <> struct make_unsigned_helper<signed   int      , true> { typedef int  type; };
+template <> struct make_unsigned_helper<unsigned int      , true> { typedef int  type; };
+template <> struct make_unsigned_helper<signed   long     , true> { typedef long type; };
+template <> struct make_unsigned_helper<unsigned long     , true> { typedef long type; };
+template <> struct make_unsigned_helper<signed   long long, true> { typedef long long type; };
+template <> struct make_unsigned_helper<unsigned long long, true> { typedef long long type; };
 
 } // namespace make_unsigned_impl
 
@@ -248,7 +289,6 @@ struct size_type<Allocator, DiffType, true> {
 //----------------------------------------------------------------------------------------------------------------------
 // Declval
 //----------------------------------------------------------------------------------------------------------------------
-
 template <typename T>
 typename add_rvalue_reference<T>::type declval() noexcept;
 
@@ -264,7 +304,7 @@ private:
     template <typename U> static no_type  is_convertible_check(...);
 
 public:
-    static bool const value = sizeof(is_convertible_check<T2>(declval<T1>())) == 1;
+    enum { value = sizeof(is_convertible_check<T2>(declval<T1>())) == 1 };
 };
 
 template <typename T>
@@ -274,7 +314,7 @@ private:
     template <typename U> static no_type  is_convertible_check(...);
 
 public:
-    static bool const value = sizeof(is_convertible_check<T>(declval<T>())) == 1;
+    enum { value = sizeof(is_convertible_check<T>(declval<T>())) == 1 };
 };
 
 } // namespace details
@@ -297,9 +337,9 @@ private:
     template <typename C>             static no_type  has_x_field_check(...);
     
 public:
-    static bool const value = sizeof(has_x_field_check<T>(0)) == 2;
+    enum { value = sizeof(has_x_field_check<T>(0)) == 2 };
 };
 
-}
+} // namespace details
 
 } // namespace etl
