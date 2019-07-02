@@ -183,7 +183,7 @@ void vector_base<Type, Allocator>::swap(vector_base& other) {
 namespace etl {
 
 template <typename T, typename A>
-vector<T, A>::vector(allocator_type const& allocator) noexcept : base(allocator, 4) {}
+vector<T, A>::vector(allocator_type const& allocator) noexcept : base(allocator, 0) {}
 
 template <typename T, typename A>
 vector<T, A>::vector(size_type const n, const_reference value, allocator_type const& allocator) : base(allocator, n) {
@@ -281,6 +281,19 @@ void vector<T, A>::reserve(size_type const n) {
 }
 
 template <typename T, typename A>
+void vector<T, A>::resize(size_type const n, const_reference value) {
+    size_type const current_size = size();
+    if (current_size < n) {
+        reserve(n);
+        for (size_type i = 0; i < n - current_size; i++) {
+            push_back(value);
+        }
+    } else {
+        base::destruct_at_end(base::begin_ + n);
+    }
+}
+
+template <typename T, typename A>
 void vector<T, A>::clear() noexcept {
     base::clear();
 }
@@ -320,7 +333,7 @@ typename vector<T, A>::iterator vector<T, A>::insert(const_iterator position, co
         }
     } else {
         reserve_n_fill(size() ? 2 * size() : 8, p, [this, &value](auto& end) {
-            base::allocator_.construct(end++, value);
+            base::allocator_.construct(end++, std::move(value));
         });
     }
     return begin() + offset;
@@ -337,14 +350,14 @@ typename vector<T, A>::iterator vector<T, A>::insert(const_iterator  position,
     if (1 == count)
         return insert(position, value);
 
-    if (count < free_space) {
+    if (count <= free_space) {
         move_range_on(count, p);
-        for (; p != p + count; ++p) {
+        for (; p != base::begin_ + count; ++p) {
             base::allocator_.construct(p, std::move(value));
         }
     } else {
-        reserve_n_fill(count + size() + 8, p, [this, &p, &count, &value](auto& end) {
-            for (pointer it = p; it != p + count; ++it) {
+        reserve_n_fill(count + size() + 8, p, [this, &count, &value](auto& end) {
+            for (size_type i = 0; i < count; ++i) {
                 base::allocator_.construct(end++, std::move(value));
             }
         });
@@ -367,15 +380,17 @@ typename enable_if <
     if (1 == required_space)
         return insert(position, *first);
 
-    if (required_space < free_space) {
+    if (required_space <= free_space) {
         move_range_on(required_space, p);
-        for (; p != p + required_space && first != last; ++first) {
-            base::allocator_.construct(p++, std::move(*first));
+        for (pointer it = p; it != p + required_space && first != last; ++first) {
+            base::allocator_.construct(it++, std::move(*first));
+            base::allocator_.destroy(first);
         }
     } else {
         reserve_n_fill(required_space + size() + 8, p, [this, &first, &last](auto& end) {
             for (; first != last; ++first) {
                 base::allocator_.construct(end++, std::move(*first));
+                base::allocator_.destroy(first);
             }
         });
     }
@@ -386,7 +401,7 @@ typename enable_if <
 template <typename T, typename A>
 typename vector<T, A>::reference vector<T, A>::operator[](size_type const n) {
     assert(n < size());
-    return const_cast<reference>(static_cast<vector<T, A> const&>(*this)[n]);
+    return const_cast<reference>(static_cast<vector const&>(*this)[n]);
 }
 
 template <typename T, typename A>
@@ -403,16 +418,19 @@ void vector<T, A>::destroy_elements() noexcept {
     base::capacity_ = base::begin_;
 }
 
+// clang-format off
 template <typename T, typename A>
 void vector<T, A>::move_range_on(size_type const offset, pointer to) {
-    assert(to);
-    /*
+    /*  Example:
                       ↓ - from
         +---+---+---+---+---+---+---+
         | 5 | 1 | 3 | 7 | 0 | 0 | 0 |
         +---+---+---+---+---+---+---+
               ↑ - to              ↑ - last
      */
+
+    assert(to);
+    if (base::end_ == to) return;
 
     pointer from = base::end_;
     pointer last = from + offset;
@@ -427,11 +445,10 @@ void vector<T, A>::move_range_on(size_type const offset, pointer to) {
 template <typename T, typename A>
 template <typename Filler>
 void vector<T, A>::reserve_n_fill(size_type const n, const_pointer position, Filler filler) {
-    // clang-format off
     if (capacity() > n) return;
 
     base tmp(base::allocator_, n);
-    for (pointer it = base::begin_; it != base::end_; ++it) {
+    for (pointer it = base::begin_; it != base::capacity_; ++it) {
         if (it == position)
             filler(tmp.end_);
 
@@ -439,7 +456,6 @@ void vector<T, A>::reserve_n_fill(size_type const n, const_pointer position, Fil
         base::allocator_.destroy(it);
     }
     base::swap(tmp);
-    // clang-format on
 }
 
 } // namespace etl

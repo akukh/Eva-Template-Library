@@ -1,13 +1,13 @@
-#include <cstdlib>
 #include <iostream>
-#include <memory>
 
 #include "../include/vector.hpp"
 
 int main() {
-    etl::vector<int> v1;
+    etl::vector<int> v1(3, 2019);
+    v1.resize(10, 666);
+    v1.push_back(1);
 
-#if 1
+#if 0
     v1.push_back(5);
     v1.push_back(1);
     v1.push_back(3);

@@ -55,12 +55,10 @@ struct alloc_traits_difference_type<Allocator, Pointer, true> {
 
 template <typename Allocator>
 struct allocator_traits {
-    typedef Allocator                           allocator_type;
-    typedef typename allocator_type::value_type value_type;
-
-    typedef typename pointer_type<value_type, allocator_type>::type           pointer;
-    typedef typename const_pointer<value_type, pointer, allocator_type>::type const_pointer;
-
+    typedef Allocator                                                            allocator_type;
+    typedef typename allocator_type::value_type                                  value_type;
+    typedef typename pointer_type<value_type, allocator_type>::type              pointer;
+    typedef typename const_pointer<value_type, pointer, allocator_type>::type    const_pointer;
     typedef typename alloc_traits_difference_type<allocator_type, pointer>::type difference_type;
     typedef typename size_type<allocator_type, difference_type>::type            size_type;
 
