@@ -110,7 +110,7 @@ TEST_CASE("Vector resize.", "[vector]") {
         REQUIRE(10 == v.capacity());
     }
 
-    // Attempting to resize an non empty vector.
+    // Attempting to resize a non-empty vector.
     {
         // Creating vector with 5 elements.
         etl::vector<int> v(5, 2019);
@@ -135,7 +135,7 @@ TEST_CASE("Vector resize.", "[vector]") {
         REQUIRE(10 == v.capacity());
     }
 
-    // Attempting to resize an non empty vector with values "666".
+    // Attempting to resize a non-empty vector with values "666".
     {
         // Creating vector with 3 elements.
         etl::vector<int> v(3, 2019);
@@ -160,7 +160,7 @@ TEST_CASE("Vector resize.", "[vector]") {
         REQUIRE(10 == v.capacity());
     }
 
-    // Attempting to resize an non empty vector.
+    // Attempting to resize a non-empty vector.
     {
         // Creating vector with 10 elements.
         etl::vector<int> v(10, 2019);
@@ -185,6 +185,7 @@ TEST_CASE("Vector resize.", "[vector]") {
         REQUIRE(10 == v.capacity());
     }
 
+    // Attempting to resize a non-empty vector twice.
     {
         // Creating vector with 10 elements.
         etl::vector<int> v(10, 2019);
