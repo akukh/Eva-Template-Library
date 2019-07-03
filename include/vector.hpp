@@ -286,7 +286,7 @@ void vector<T, A>::resize(size_type const n, const_reference value) {
     if (current_size < n) {
         reserve(n);
         for (size_type i = 0; i < n - current_size; i++) {
-            push_back(value);
+            base::allocator_.construct(base::end_++, std::move(value));
         }
     } else {
         base::destruct_at_end(base::begin_ + n);
@@ -430,7 +430,8 @@ void vector<T, A>::move_range_on(size_type const offset, pointer to) {
      */
 
     assert(to);
-    if (base::end_ == to) return;
+    if (base::end_ == to) 
+        return;
 
     pointer from = base::end_;
     pointer last = from + offset;
@@ -445,13 +446,13 @@ void vector<T, A>::move_range_on(size_type const offset, pointer to) {
 template <typename T, typename A>
 template <typename Filler>
 void vector<T, A>::reserve_n_fill(size_type const n, const_pointer position, Filler filler) {
-    if (capacity() > n) return;
+    if (capacity() > n) 
+        return;
 
     base tmp(base::allocator_, n);
-    for (pointer it = base::begin_; it != base::capacity_; ++it) {
-        if (it == position)
+    for (pointer it = base::begin_; it != base::end_; ++it) {
+        if (it == position) 
             filler(tmp.end_);
-
         base::allocator_.construct(tmp.end_++, std::move(*it));
         base::allocator_.destroy(it);
     }
