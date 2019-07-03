@@ -61,6 +61,8 @@ TEST_CASE("Vector reserve.", "[vector]") {
         etl::vector<int, UT_allocator<int>> v;
         std::printf("vector[%p] reserving %d points.\n", &v, 10);
         v.reserve(10);
+
+        // Getting new values.
         REQUIRE(0 == v.size());
         REQUIRE(10 == v.capacity());
     }
@@ -71,16 +73,20 @@ TEST_CASE("Vector reserve.", "[vector]") {
         etl::vector<int, UT_allocator<int>> v(10);
         std::printf("vector[%p] reserving %d points.\n", &v, 20);
         v.reserve(20);
+
+        // Getting new values.
         REQUIRE(10 == v.size());
         REQUIRE(20 == v.capacity());
     }
 
-    // Reserving less space when vector constructed with capacity.
+    // Attempting to reserve less memory than there is originally.
     {
         std::printf("\n");
         etl::vector<int, UT_allocator<int>> v(20);
         std::printf("vector[%p] reserving %d points.\n", &v, 20);
         v.reserve(10);
+
+        // Values should not change.
         REQUIRE(20 == v.size());
         REQUIRE(20 == v.capacity());
     }
@@ -88,14 +94,20 @@ TEST_CASE("Vector reserve.", "[vector]") {
 
 TEST_CASE("Vector resize.", "[vector]") {
 
+    // Attempting to resize an "empty" vector.
     {
+        // Creating "empty" vector.
         etl::vector<int> v;
         v.resize(10);
+
+        // Getting new values.
         REQUIRE(10 == v.size());
         REQUIRE(10 == v.capacity());
     }
 
+    // Attempting to resize an non empty vector.
     {
+        // Creating vector with 5 elements.
         etl::vector<int> v(5, 2019);
         std::printf("\nvector[%p] was constructed with size = %lu, value = %d\n", &v, v.size(), v[0]);
         std::printf("vector[%p] contains:\n[ ", &v);
@@ -103,6 +115,8 @@ TEST_CASE("Vector resize.", "[vector]") {
             std::printf("%d ", i);
         }
         std::printf("]\n");
+
+        // Resizing vector to the new size.
         v.resize(10);
         std::printf("vector[%p] was resized to %lu\n", &v, v.size());
         std::printf("vector[%p] should contain additional elements:\n[ ", &v);
@@ -110,11 +124,15 @@ TEST_CASE("Vector resize.", "[vector]") {
             std::printf("%d ", i);
         }
         std::printf("]\n");
+
+        // Getting new values.
         REQUIRE(10 == v.size());
         REQUIRE(10 == v.capacity());
     }
 
+    // Attempting to resize an non empty vector with value 666.
     {
+        // Creating vector with 3 elements.
         etl::vector<int> v(3, 2019);
         std::printf("\nvector[%p] was constructed with size = %lu, value = %d\n", &v, v.size(), v[0]);
         std::printf("vector[%p] contains:\n[ ", &v);
@@ -122,6 +140,8 @@ TEST_CASE("Vector resize.", "[vector]") {
             std::printf("%d ", i);
         }
         std::printf("]\n");
+
+        // Resizing vector to the new size and fill with 666 values.
         v.resize(10, 666);
         std::printf("vector[%p] was resized to %lu, value = %d\n", &v, v.size(), 666);
         std::printf("vector[%p] should contain additional elements:\n[ ", &v);
@@ -129,11 +149,15 @@ TEST_CASE("Vector resize.", "[vector]") {
             std::printf("%d ", i);
         }
         std::printf("]\n");
+
+        // Getting new values.
         REQUIRE(10 == v.size());
         REQUIRE(10 == v.capacity());
     }
 
+    // Attempting to resize an non empty vector.
     {
+        // Creating vector with 10 elements.
         etl::vector<int> v(10, 2019);
         std::printf("\nvector[%p] was constructed with size = %lu, value = %d\n", &v, v.size(), v[0]);
         std::printf("vector[%p] contains:\n[ ", &v);
@@ -141,6 +165,8 @@ TEST_CASE("Vector resize.", "[vector]") {
             std::printf("%d ", i);
         }
         std::printf("]\n");
+
+        // Change the size of the vector to smaller.
         v.resize(5);
         std::printf("vector[%p] was resized to %lu\n", &v, v.size());
         std::printf("vector[%p] should contain fewer elements:\n[ ", &v);
@@ -148,11 +174,14 @@ TEST_CASE("Vector resize.", "[vector]") {
             std::printf("%d ", i);
         }
         std::printf("]\n");
+
+        // Getting new smaller values.
         REQUIRE(5 == v.size());
         REQUIRE(10 == v.capacity());
     }
 
     {
+        // Creating vector with 10 elements.
         etl::vector<int> v(10, 2019);
         std::printf("\nvector[%p] was constructed with size = %lu, value = %d\n", &v, v.size(), v[0]);
         std::printf("vector[%p] contains:\n[ ", &v);
@@ -160,6 +189,8 @@ TEST_CASE("Vector resize.", "[vector]") {
             std::printf("%d ", i);
         }
         std::printf("]\n");
+
+        // Change the size of the vector to smaller.
         v.resize(5);
         std::printf("vector[%p] was resized to %lu\n", &v, v.size());
         std::printf("vector[%p] should contain fewer elements:\n[ ", &v);
@@ -167,8 +198,12 @@ TEST_CASE("Vector resize.", "[vector]") {
             std::printf("%d ", i);
         }
         std::printf("]\n");
+
+        // Getting new smaller values.
         REQUIRE(5 == v.size());
         REQUIRE(10 == v.capacity());
+
+        // Resize the vector back to a larger one and fill with 666 values.
         v.resize(10, 666);
         std::printf("vector[%p] was resized to %lu, value = %d\n", &v, v.size(), 666);
         std::printf("vector[%p] should contain additional elements:\n[ ", &v);
@@ -176,6 +211,8 @@ TEST_CASE("Vector resize.", "[vector]") {
             std::printf("%d ", i);
         }
         std::printf("]\n");
+
+        // Getting new "old" values.
         REQUIRE(10 == v.size());
         REQUIRE(10 == v.capacity());
     }
