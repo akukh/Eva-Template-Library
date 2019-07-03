@@ -58,6 +58,7 @@ TEST_CASE("Vector reserve.", "[vector]") {
 
     // Reserving space when vector is "empty".
     {
+        // Creating an "empty" vector with a special debug version of the allocator.
         etl::vector<int, UT_allocator<int>> v;
         std::printf("vector[%p] reserving %d points.\n", &v, 10);
         v.reserve(10);
@@ -70,6 +71,8 @@ TEST_CASE("Vector reserve.", "[vector]") {
     // Reserving space when vector constructed with capacity.
     {
         std::printf("\n");
+
+        // Creating a vector of 10 elements with a special debug version of the allocator.
         etl::vector<int, UT_allocator<int>> v(10);
         std::printf("vector[%p] reserving %d points.\n", &v, 20);
         v.reserve(20);
@@ -82,6 +85,8 @@ TEST_CASE("Vector reserve.", "[vector]") {
     // Attempting to reserve less memory than there is originally.
     {
         std::printf("\n");
+
+        // Creating a vector of 20 elements with a special debug version of the allocator.
         etl::vector<int, UT_allocator<int>> v(20);
         std::printf("vector[%p] reserving %d points.\n", &v, 20);
         v.reserve(10);
@@ -130,7 +135,7 @@ TEST_CASE("Vector resize.", "[vector]") {
         REQUIRE(10 == v.capacity());
     }
 
-    // Attempting to resize an non empty vector with value 666.
+    // Attempting to resize an non empty vector with values "666".
     {
         // Creating vector with 3 elements.
         etl::vector<int> v(3, 2019);
@@ -141,7 +146,7 @@ TEST_CASE("Vector resize.", "[vector]") {
         }
         std::printf("]\n");
 
-        // Resizing vector to the new size and fill with 666 values.
+        // Resizing vector to the new size and fill with "666" values.
         v.resize(10, 666);
         std::printf("vector[%p] was resized to %lu, value = %d\n", &v, v.size(), 666);
         std::printf("vector[%p] should contain additional elements:\n[ ", &v);
@@ -203,7 +208,7 @@ TEST_CASE("Vector resize.", "[vector]") {
         REQUIRE(5 == v.size());
         REQUIRE(10 == v.capacity());
 
-        // Resize the vector back to a larger one and fill with 666 values.
+        // Resize the vector back to a larger one and fill with "666" values.
         v.resize(10, 666);
         std::printf("vector[%p] was resized to %lu, value = %d\n", &v, v.size(), 666);
         std::printf("vector[%p] should contain additional elements:\n[ ", &v);
