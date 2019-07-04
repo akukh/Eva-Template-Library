@@ -189,7 +189,7 @@ template <typename T, typename A>
 vector<T, A>::vector(size_type const n, const_reference value, allocator_type const& allocator) : base(allocator, n) {
     try {
         for (size_type i = 0; i < n; ++i) {
-            base::allocator_.construct(base::end_++, value);
+            base::allocator_.construct(base::end_++, std::move(value));
         }
     } catch (...) {
         while (base::end_-- > base::begin_) {
