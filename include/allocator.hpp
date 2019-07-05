@@ -2,6 +2,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "type_traits.hpp"
+
 // TODO:
 //  get rid of the unnecessary headers
 #include <limits>
@@ -26,7 +28,10 @@ struct allocator {
     template <typename U>
     void destroy(U* p) noexcept;
 
-    size_type max_size() const noexcept;
+    typename enable_if<
+        is_arithmetic<value_type>::value, 
+        value_type
+    >::type max_size() const noexcept;
 
     template <typename U>
     struct rebind { typedef allocator<U> other; };
@@ -39,7 +44,9 @@ namespace etl {
 
 template <typename T>
 [[nodiscard]] typename allocator<T>::pointer allocator<T>::allocate(size_type const n) {
-    if (n > max_size()) {
+    typedef decltype(max_size()) ret_type;
+    typedef typename conditional<is_integral<ret_type>::value, size_type, ret_type>::type safe_type;
+    if (n > static_cast<safe_type>(max_size())) {
         throw "bad_alloc"; // TODO: throw bad_alloc()
     }
     return static_cast<pointer>(::operator new(n * sizeof(T)));
@@ -63,8 +70,11 @@ void allocator<T>::destroy(U* p) noexcept {
 }
 
 template <typename T>
-typename allocator<T>::size_type allocator<T>::max_size() const noexcept {
-    return std::numeric_limits<T>::max() / sizeof(T);
+typename enable_if<
+    is_arithmetic<typename allocator<T>::value_type>::value, 
+    typename allocator<T>::value_type
+>::type allocator<T>::max_size() const noexcept {
+    return std::numeric_limits<value_type>::max() / sizeof(value_type);
 }
 
 } // namespace etl

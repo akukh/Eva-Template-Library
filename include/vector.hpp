@@ -26,7 +26,7 @@ struct vector_base {
     pointer        capacity_;
     pointer        end_;
 
-    vector_base(allocator_type const& allocator, typename allocator_type::size_type const n);
+    vector_base(allocator_type const& allocator, size_type const n);
     ~vector_base();
 
     vector_base(vector_base const& other) = delete;
@@ -125,7 +125,7 @@ private:
 namespace etl {
 
 template <typename Type, typename Allocator>
-vector_base<Type, Allocator>::vector_base(allocator_type const& allocator, typename allocator_type::size_type const n)
+vector_base<Type, Allocator>::vector_base(allocator_type const& allocator, size_type const n)
     : allocator_(allocator), begin_(allocator_.allocate(n)), capacity_(begin_ + n), end_(begin_) {}
 
 template <typename Type, typename Allocator>
@@ -136,7 +136,7 @@ vector_base<Type, Allocator>::~vector_base() {
 template <typename Type, typename Allocator>
 vector_base<Type, Allocator>::vector_base(vector_base&& other) noexcept
     : allocator_(other.allocator_), begin_(other.begin_), capacity_(other.capacity_), end_(other.end_) {
-    begin_ = end_ = capacity_ = nullptr;
+    other.begin_ = other.end_ = other.capacity_ = nullptr;
 }
 
 template <typename Type, typename Allocator>

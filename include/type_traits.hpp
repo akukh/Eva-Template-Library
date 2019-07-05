@@ -33,6 +33,11 @@ struct void_t { typedef void type; };
 template <typename T1, typename T2> struct is_same       : false_type {};
 template <typename T>               struct is_same<T, T> : true_type  {};
 
+template <bool Flag, typename If, typename Then>
+struct conditional { typedef If type; };
+template <typename If, typename Then>
+struct conditional<false, If, Then> { typedef Then type; };
+
 //----------------------------------------------------------------------------------------------------------------------
 // Is reference
 //----------------------------------------------------------------------------------------------------------------------
@@ -121,6 +126,28 @@ template <>           struct is_integral_helper<unsigned long long> : true_type 
 
 template <typename T>
 struct is_integral : details::is_integral_helper<typename remove_cv<T>::type> {};
+
+//----------------------------------------------------------------------------------------------------------------------
+// Is floating-point
+//----------------------------------------------------------------------------------------------------------------------
+namespace details {
+
+template <typename T> struct is_floating_point_helper              : public false_type {};
+template <>           struct is_floating_point_helper<float>       : public true_type {};
+template <>           struct is_floating_point_helper<double>      : public true_type {};
+template <>           struct is_floating_point_helper<long double> : public true_type {};
+
+} // namespace details
+
+template <typename T> 
+struct is_floating_point : details::is_floating_point_helper<typename remove_cv<T>::type> {};
+
+//----------------------------------------------------------------------------------------------------------------------
+// Is arithmetic
+//----------------------------------------------------------------------------------------------------------------------
+template <typename T>
+struct is_arithmetic : integral_constant<bool, is_integral<T>::value      ||
+                                               is_floating_point<T>::value> {};
 
 //----------------------------------------------------------------------------------------------------------------------
 // Pointer traits
@@ -215,10 +242,10 @@ struct const_pointer<T, Pointer, Allocator, false> {
 //----------------------------------------------------------------------------------------------------------------------
 // Type list
 //----------------------------------------------------------------------------------------------------------------------
-template <typename H, typename T>
+template <typename Head, typename Tail>
 struct type_list {
-    typedef H head;
-    typedef T tail;
+    typedef Head head;
+    typedef Tail tail;
 };
 
 struct nat {};
@@ -228,21 +255,23 @@ struct nat {};
 //----------------------------------------------------------------------------------------------------------------------
 typedef type_list<unsigned char, 
             type_list<unsigned int, 
-                type_list<unsigned long, nat>
+                type_list<unsigned long, 
+                    type_list<unsigned long long, nat>
+                >
             >
         > unsigned_types;
 
 template <typename TypeList, size_t Size, bool = Size <= sizeof(typename TypeList::head)>
 struct find_first;
 
-template <typename H, typename T, size_t Size>
-struct find_first<type_list<H, T>, Size, true> {
-    typedef T type;
+template <typename Head, typename Tail, size_t Size>
+struct find_first<type_list<Head, Tail>, Size, true> {
+    typedef Tail type;
 };
 
-template <typename H, typename T, size_t Size>
-struct find_first<type_list<H, T>, Size, false> {
-    typedef typename find_first<T, Size>::type type;
+template <typename Head, typename Tail, size_t Size>
+struct find_first<type_list<Head, Tail>, Size, false> {
+    typedef typename find_first<Tail, Size>::type type;
 };
 
 namespace details {
@@ -256,14 +285,14 @@ struct make_unsigned_helper<T, true> {
 };
 
 template <> struct make_unsigned_helper<bool              , true> {};
-template <> struct make_unsigned_helper<signed   int      , true> { typedef int  type; };
-template <> struct make_unsigned_helper<unsigned int      , true> { typedef int  type; };
-template <> struct make_unsigned_helper<signed   long     , true> { typedef long type; };
-template <> struct make_unsigned_helper<unsigned long     , true> { typedef long type; };
-template <> struct make_unsigned_helper<signed   long long, true> { typedef long long type; };
-template <> struct make_unsigned_helper<unsigned long long, true> { typedef long long type; };
+template <> struct make_unsigned_helper<signed   int      , true> { typedef unsigned int  type; };
+template <> struct make_unsigned_helper<unsigned int      , true> { typedef unsigned int  type; };
+template <> struct make_unsigned_helper<signed   long     , true> { typedef unsigned long type; };
+template <> struct make_unsigned_helper<unsigned long     , true> { typedef unsigned long type; };
+template <> struct make_unsigned_helper<signed   long long, true> { typedef unsigned long long type; };
+template <> struct make_unsigned_helper<unsigned long long, true> { typedef unsigned long long type; };
 
-} // namespace make_unsigned_impl
+} // namespace details
 
 template <typename T>
 struct make_unsigned {
