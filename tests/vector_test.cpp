@@ -104,8 +104,8 @@ SCENARIO("vectors can be constructed in different ways", "[vector]") {
                                 REQUIRE(2019.0 == i);
                         }
                     }
+                    THEN("the original vector must be empty") { REQUIRE(v1.empty()); }
                 }
-                THEN("the original vector must be empty") { REQUIRE(v1.empty()); }
             }
         }
     }
