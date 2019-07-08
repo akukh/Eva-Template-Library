@@ -1,7 +1,6 @@
 #pragma once
 #include <cassert>
 
-#include "allocator.hpp"
 #include "iterator.hpp"
 #include "memory.hpp"
 
@@ -384,13 +383,13 @@ typename enable_if <
         move_range_on(required_space, p);
         for (pointer it = p; it != p + required_space && first != last; ++first) {
             base::allocator_.construct(it++, std::move(*first));
-            base::allocator_.destroy(first);
+            base::allocator_.destroy(&*first);
         }
     } else {
         reserve_n_fill(required_space + size() + 8, p, [this, &first, &last](auto& end) {
             for (; first != last; ++first) {
                 base::allocator_.construct(end++, std::move(*first));
-                base::allocator_.destroy(first);
+                base::allocator_.destroy(&*first);
             }
         });
     }

@@ -1,4 +1,6 @@
 #pragma once
+#include <cstdint>
+
 #include "type_traits.hpp"
 
 // clang-format off
@@ -27,22 +29,6 @@ struct allocator<void const> {
     struct rebind { typedef allocator<U> other; };
 };
 
-template <typename T, typename U = void>
-struct has_difference_type : false_type {};
-
-template <typename T>
-struct has_difference_type<T, typename void_t<typename T::difference_type>::type> : true_type {};
-
-template <typename Pointer, bool = has_difference_type<Pointer>::value>
-struct pointer_traits_difference_type {
-    typedef ptrdiff_t type;
-};
-
-template <typename Pointer>
-struct pointer_traits_difference_type<Pointer, true> {
-    typedef typename Pointer::difference_type type;
-};
-
 template <typename Allocator, typename Pointer, bool = has_difference_type<Allocator>::value>
 struct alloc_traits_difference_type {
     typedef typename pointer_traits<Pointer>::difference_type type;
@@ -62,22 +48,102 @@ struct allocator_traits {
     typedef typename alloc_traits_difference_type<allocator_type, pointer>::type difference_type;
     typedef typename size_type<allocator_type, difference_type>::type            size_type;
 
-    // TODO:
-    //  complete implementation
-#if 0
-    template <typename T> struct rebind_alloc {
-        typedef typename allocator_traits_rebind<allocator_type, T>::type other;
-    };
-    template <typename T> struct rebind_traits {
-        typedef allocator_traits<typename rebind_alloc<T>::other> other;
-    };
-#endif
+    static pointer allocate(allocator_type& a, size_type n);
+    static void    deallocate(allocator_type& a, pointer p, size_type n) NOEXCEPT;
 
-    static pointer allocate(allocator_type& a, size_type n) { return a.allocate(n); }
-    static void    deallocate(allocator_type& a, pointer p, size_type n) noexcept { a.deallocate(p, n); }
-
-    static void construct(allocator_type& a, pointer p, value_type const& value) { a.construct(p, value); }
-    static void destroy(allocator_type& a, pointer p) { a.destroy(p); }
+    static void construct(allocator_type& a, pointer p, value_type const& value);
+    static void destroy(allocator_type& a, pointer p);
 };
 
+template <typename T>
+struct allocator {
+    typedef T              value_type;
+    typedef value_type*    pointer;
+    typedef size_t         size_type;
+    typedef ptrdiff_t      difference_type;
+
+    CONSTEXPR allocator() NOEXCEPT {}
+    CONSTEXPR allocator(allocator const&) NOEXCEPT {}
+    template <typename U> 
+    CONSTEXPR allocator(allocator<U> const&) NOEXCEPT {}
+
+    [[nodiscard]] pointer allocate(size_type const n);
+    void                  deallocate(pointer p, [[maybe_unused]] size_type const n) NOEXCEPT;
+
+    template <typename U, typename... Args> 
+    void construct(U* p, Args&&... args);
+    template <typename U>
+    void destroy(U* p) NOEXCEPT;
+
+    size_type max_size() const NOEXCEPT;
+};
+
+template <typename T, typename U>
+inline bool operator==(const allocator<T>&, const allocator<U>&) NOEXCEPT { return true; }
+
+template <typename T, typename U>
+inline bool operator!=(const allocator<T>&, const allocator<U>&) NOEXCEPT { return false; }
+
 } // namespace etl
+
+// Allocator implementation:
+namespace etl {
+
+template <typename T>
+[[nodiscard]] typename allocator<T>::pointer allocator<T>::allocate(size_type const n) {
+    if (n > max_size()) {
+        throw "bad_alloc"; // TODO: throw bad_alloc()
+    }
+    return static_cast<pointer>(::operator new(n * sizeof(T)));
+}
+
+template <typename T>
+void allocator<T>::deallocate(pointer p, [[maybe_unused]] size_type const n) NOEXCEPT {
+    ::operator delete(p);
+}
+
+template <typename T>
+template <typename U, typename... Args>
+void allocator<T>::construct(U* p, Args&&... args) {
+    ::new(static_cast<void*>(p)) U(std::forward<Args>(args)...);
+}
+
+template <typename T>
+template <typename U>
+void allocator<T>::destroy(U* p) NOEXCEPT {
+    p->~U();
+}
+
+template <typename T>
+typename allocator<T>::size_type allocator<T>::max_size() const NOEXCEPT {
+    return size_type(~0) / sizeof(value_type);
+}
+
+} // namespace etl
+// Allocator implementation
+
+// Allocator traits implementation:
+namespace etl {
+
+template <typename Allocator>
+typename allocator_traits<Allocator>::pointer allocator_traits<Allocator>::allocate(allocator_type& a, size_type n) { 
+    return a.allocate(n); 
+}
+
+template <typename Allocator>
+void allocator_traits<Allocator>::deallocate(allocator_type& a, pointer p, size_type n) NOEXCEPT { 
+    a.deallocate(p, n); 
+}
+
+template <typename Allocator>
+void allocator_traits<Allocator>::construct(allocator_type& a, pointer p, value_type const& value) { 
+    a.construct(p, value); 
+}
+
+template <typename Allocator>
+void allocator_traits<Allocator>::destroy(allocator_type& a, pointer p) { 
+    a.destroy(p); 
+}
+
+} // namespace etl
+// Allocator traits implementation

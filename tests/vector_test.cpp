@@ -70,9 +70,9 @@ SCENARIO("vectors can be constructed in different ways", "[vector]") {
         REQUIRE(5 == v1.capacity());
 
         AND_GIVEN("a vector constructed from some another vector") {
+            etl::vector<double> v2(v1);
             WHEN("the original vector was copied") {
                 AND_WHEN("a new vector constructed with the contents of other") {
-                    etl::vector<double> v2(v1);
                     THEN("its size and capacity must be equal to the size and capacity of the original vector") {
                         REQUIRE(5 == v2.size());
                         REQUIRE(5 == v2.capacity());
@@ -93,9 +93,9 @@ SCENARIO("vectors can be constructed in different ways", "[vector]") {
         REQUIRE(10 == v1.capacity());
 
         AND_GIVEN("a vector constructed from some another vector using move semantics") {
+            etl::vector<double> v2(std::move(v1));
             WHEN("the original vector was moved") {
                 AND_WHEN("a new vector constructed with the contents of other") {
-                    etl::vector<double> v2(std::move(v1));
                     THEN("its size and capacity must be equal to the size and capacity of the original vector") {
                         REQUIRE(10 == v2.size());
                         REQUIRE(10 == v2.capacity());
@@ -108,33 +108,6 @@ SCENARIO("vectors can be constructed in different ways", "[vector]") {
                 }
             }
         }
-    }
-}
-
-TEST_CASE("Vector creation.", "[vector]") {
-
-    // Creating "empty" vector.
-    {
-        etl::vector<int> v;
-        REQUIRE(0 == v.size());
-        REQUIRE(0 == v.capacity());
-    }
-
-    // Creating a vector of 10 elements.
-    {
-        etl::vector<int> v(10);
-        REQUIRE(10 == v.size());
-        REQUIRE(10 <= v.capacity());
-    }
-
-    // Creating a vector of 10 elements and filled with value 0.
-    {
-        etl::vector<int> v(10, 0);
-        for (auto& i : v) {
-            REQUIRE(0 == i);
-        }
-        REQUIRE(10 == v.size());
-        REQUIRE(10 <= v.capacity());
     }
 }
 
