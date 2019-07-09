@@ -39,7 +39,7 @@ SCENARIO("vectors can be constructed in different ways", "[vector]") {
         }
     }
 
-    GIVEN("an integer vector which contains ten elements") {
+    GIVEN("an integer vector which already contains elements") {
         etl::vector<int> v(10);
         WHEN("a vector instance is created") {
             THEN("its size and capacity must be equal to ten") {
@@ -49,7 +49,7 @@ SCENARIO("vectors can be constructed in different ways", "[vector]") {
         }
     }
 
-    GIVEN("an integer vector which contains twenty elements with a value=2019") {
+    GIVEN("an integer vector which already contains elements with a value=2019") {
         etl::vector<int> v(20, 2019);
         WHEN("a vector instance is created") {
             THEN("its size and capacity is equal to twenty") {
@@ -63,7 +63,7 @@ SCENARIO("vectors can be constructed in different ways", "[vector]") {
         }
     }
 
-    GIVEN("an floating-point vector which contains five elements with a value=2019.0") {
+    GIVEN("an floating-point vector which contains elements with a value=2019.0") {
         etl::vector<double> v1(5, 2019.0);
 
         REQUIRE(5 == v1.size());
@@ -86,7 +86,7 @@ SCENARIO("vectors can be constructed in different ways", "[vector]") {
         }
     }
 
-    GIVEN("an floating-point vector which contains ten elements with a value=2019.0") {
+    GIVEN("an floating-point vector which contains elements with a value=2019.0") {
         etl::vector<double> v1(10, 2019.0);
 
         REQUIRE(10 == v1.size());
@@ -111,172 +111,92 @@ SCENARIO("vectors can be constructed in different ways", "[vector]") {
     }
 }
 
-TEST_CASE("Vector reserve.", "[vector]") {
+SCENARIO("vector capacity can be increased and decreased", "[vector]") {
 
-    // Reserving space when vector is "empty".
-    {
-        // Creating an "empty" vector with a special debug version of the allocator.
+    GIVEN("an empty vector of integer values") {
         etl::vector<int, UT_allocator<int>> v;
-        std::printf("vector[%p] reserving %d points.\n", &v, 10);
-        v.reserve(10);
-
-        // Getting new values.
-        REQUIRE(0 == v.size());
-        REQUIRE(10 == v.capacity());
+        WHEN("a vector capacity size was increased to a new value") {
+            v.reserve(10);
+            THEN("since new value is greater than the current capacity, new storage is allocated") {
+                REQUIRE(0 == v.size());
+                REQUIRE(10 == v.capacity());
+            }
+        }
     }
 
-    // Reserving space when vector constructed with capacity.
-    {
-        std::printf("\n");
-
-        // Creating a vector of 10 elements with a special debug version of the allocator.
+    GIVEN("an integer vector which already contains elements") {
         etl::vector<int, UT_allocator<int>> v(10);
-        std::printf("vector[%p] reserving %d points.\n", &v, 20);
-        v.reserve(20);
-
-        // Getting new values.
-        REQUIRE(10 == v.size());
-        REQUIRE(20 == v.capacity());
+        WHEN("a vector capacity size was increased to a new value") {
+            v.reserve(20);
+            THEN("since new value is greater than the current capacity, new storage is allocated") {
+                REQUIRE(10 == v.size());
+                REQUIRE(20 == v.capacity());
+            }
+        }
     }
 
-    // Attempting to reserve less memory than there is originally.
-    {
-        std::printf("\n");
-
-        // Creating a vector of 20 elements with a special debug version of the allocator.
+    GIVEN("an integer vector which already contains elements") {
         etl::vector<int, UT_allocator<int>> v(20);
-        std::printf("vector[%p] reserving %d points.\n", &v, 20);
-        v.reserve(10);
-
-        // Values should not change.
-        REQUIRE(20 == v.size());
-        REQUIRE(20 == v.capacity());
+        WHEN("a vector capacity size was decreased to a new value") {
+            v.reserve(10);
+            THEN("since new value is lesser than the current capacity than the method does nothing") {
+                REQUIRE(20 == v.size());
+                REQUIRE(20 == v.capacity());
+            }
+        }
     }
 }
 
-TEST_CASE("Vector resize.", "[vector]") {
+SCENARIO("resizing the vector to contain count elements", "[vector]") {
 
-    // Attempting to resize an "empty" vector.
-    {
-        // Creating "empty" vector.
+    GIVEN("an empty vector of integer values") {
         etl::vector<int> v;
-        v.resize(10);
-
-        // Getting new values.
-        REQUIRE(10 == v.size());
-        REQUIRE(10 == v.capacity());
+        WHEN("a vector is resized to a new count of elements") {
+            v.resize(10);
+            THEN("since size is less than new count, additional elements must be appended") {
+                REQUIRE(10 == v.size());
+                REQUIRE(10 == v.capacity());
+            }
+        }
     }
 
-    // Attempting to resize a non-empty vector.
-    {
-        // Creating vector with 5 elements.
+    GIVEN("an integer vector which already contains elements") {
+        etl::vector<int> v(5);
+        WHEN("a vector is resized to a new count of elements") {
+            v.resize(10);
+            THEN("since size is less than new count, additional elements must be appended") {
+                REQUIRE(10 == v.size());
+                REQUIRE(10 == v.capacity());
+            }
+        }
+    }
+
+    GIVEN("an integer vector which already contains elements with a value=2019.0") {
         etl::vector<int> v(5, 2019);
-        std::printf("\nvector[%p] was constructed with size = %lu, value = %d\n", &v, v.size(), v[0]);
-        std::printf("vector[%p] contains:\n[ ", &v);
-        for (auto& i : v) {
-            std::printf("%d ", i);
+        WHEN("a vector is resized to a new count of elements with the value to initialize the new elements") {
+            v.resize(10, 666);
+            THEN("since size is less than new count, additional copies of value are appended") {
+                REQUIRE(10 == v.size());
+                REQUIRE(10 == v.capacity());
+            }
         }
-        std::printf("]\n");
-
-        // Resizing vector to the new size.
-        v.resize(10);
-        std::printf("vector[%p] was resized to %lu\n", &v, v.size());
-        std::printf("vector[%p] should contain additional elements:\n[ ", &v);
-        for (auto& i : v) {
-            std::printf("%d ", i);
-        }
-        std::printf("]\n");
-
-        // Getting new values.
-        REQUIRE(10 == v.size());
-        REQUIRE(10 == v.capacity());
     }
 
-    // Attempting to resize a non-empty vector with values "666".
-    {
-        // Creating vector with 3 elements.
-        etl::vector<int> v(3, 2019);
-        std::printf("\nvector[%p] was constructed with size = %lu, value = %d\n", &v, v.size(), v[0]);
-        std::printf("vector[%p] contains:\n[ ", &v);
-        for (auto& i : v) {
-            std::printf("%d ", i);
-        }
-        std::printf("]\n");
-
-        // Resizing vector to the new size and fill with "666" values.
-        v.resize(10, 666);
-        std::printf("vector[%p] was resized to %lu, value = %d\n", &v, v.size(), 666);
-        std::printf("vector[%p] should contain additional elements:\n[ ", &v);
-        for (auto& i : v) {
-            std::printf("%d ", i);
-        }
-        std::printf("]\n");
-
-        // Getting new values.
-        REQUIRE(10 == v.size());
-        REQUIRE(10 == v.capacity());
-    }
-
-    // Attempting to resize a non-empty vector.
-    {
-        // Creating vector with 10 elements.
+    GIVEN("an integer vector which already contains elements with a value=2019.0") {
         etl::vector<int> v(10, 2019);
-        std::printf("\nvector[%p] was constructed with size = %lu, value = %d\n", &v, v.size(), v[0]);
-        std::printf("vector[%p] contains:\n[ ", &v);
-        for (auto& i : v) {
-            std::printf("%d ", i);
+        WHEN("a vector is resized to a new count of elements") {
+            v.resize(5);
+            THEN("since size is greater than count, the vector is reduced to given count elements") {
+                REQUIRE(5 == v.size());
+                REQUIRE(10 == v.capacity());
+            }
         }
-        std::printf("]\n");
-
-        // Change the size of the vector to smaller.
-        v.resize(5);
-        std::printf("vector[%p] was resized to %lu\n", &v, v.size());
-        std::printf("vector[%p] should contain fewer elements:\n[ ", &v);
-        for (auto& i : v) {
-            std::printf("%d ", i);
+        WHEN("a vector is resized to a new count of elements with the value to initialize the new elements") {
+            v.resize(15, 666);
+            THEN("since size is less than new count, additional copies of value are appended") {
+                REQUIRE(15 == v.size());
+                REQUIRE(15 == v.capacity());
+            }
         }
-        std::printf("]\n");
-
-        // Getting new smaller values.
-        REQUIRE(5 == v.size());
-        REQUIRE(10 == v.capacity());
-    }
-
-    // Attempting to resize a non-empty vector twice.
-    {
-        // Creating vector with 10 elements.
-        etl::vector<int> v(10, 2019);
-        std::printf("\nvector[%p] was constructed with size = %lu, value = %d\n", &v, v.size(), v[0]);
-        std::printf("vector[%p] contains:\n[ ", &v);
-        for (auto& i : v) {
-            std::printf("%d ", i);
-        }
-        std::printf("]\n");
-
-        // Change the size of the vector to smaller.
-        v.resize(5);
-        std::printf("vector[%p] was resized to %lu\n", &v, v.size());
-        std::printf("vector[%p] should contain fewer elements:\n[ ", &v);
-        for (auto& i : v) {
-            std::printf("%d ", i);
-        }
-        std::printf("]\n");
-
-        // Getting new smaller values.
-        REQUIRE(5 == v.size());
-        REQUIRE(10 == v.capacity());
-
-        // Resize the vector back to a larger one and fill with "666" values.
-        v.resize(10, 666);
-        std::printf("vector[%p] was resized to %lu, value = %d\n", &v, v.size(), 666);
-        std::printf("vector[%p] should contain additional elements:\n[ ", &v);
-        for (auto& i : v) {
-            std::printf("%d ", i);
-        }
-        std::printf("]\n");
-
-        // Getting new "old" values.
-        REQUIRE(10 == v.size());
-        REQUIRE(10 == v.capacity());
     }
 }
