@@ -312,6 +312,22 @@ template <typename T>
 typename add_rvalue_reference<T>::type declval() NOEXCEPT;
 
 //----------------------------------------------------------------------------------------------------------------------
+// Is constructible
+//----------------------------------------------------------------------------------------------------------------------
+namespace details {
+
+template <typename, typename T, typename Arg>
+struct is_constructible_helper : false_type {};
+
+template <typename T, typename Arg>
+struct is_constructible_helper<void_t<decltype(T(declval<Arg>()))>, T, Arg> : true_type {};
+
+} // namespace details 
+
+template <typename T, typename Arg>
+struct is_constructible : details::is_constructible_helper<void_t<T>, T, Arg> {};
+
+//----------------------------------------------------------------------------------------------------------------------
 // Is convertible
 //----------------------------------------------------------------------------------------------------------------------
 namespace details {
