@@ -48,8 +48,8 @@ struct iterator_traits_impl<Iterator, true>
 
 } // namespace details
 
-template <typename Iterator>
-struct iterator_traits : details::iterator_traits_impl<Iterator, has_iterator_category<Iterator>::value> {};
+template <typename T>
+struct iterator_traits : details::iterator_traits_impl<T, has_iterator_category<T>::value> {};
 
 template <typename T>
 struct iterator_traits<T*> {
@@ -60,7 +60,7 @@ struct iterator_traits<T*> {
     typedef random_access_iterator_tag  iterator_category;
 };
 
-template <typename T, typename U, bool = has_iterator_category<iterator_traits<T> >::value>
+template <typename T, typename U, bool = has_iterator_category<iterator_traits<T>>::value>
 struct has_iterator_category_convertible_to
     : integral_constant<bool, is_convertible<typename iterator_traits<T>::iterator_category, U>::value> {};
 
@@ -94,7 +94,7 @@ struct wrap_iter {
     template <typename OtherIterator>
     wrap_iter(wrap_iter<OtherIterator> const& other);
 
-    iterator_type base() const noexcept;
+    iterator_type raw_ptr() const noexcept;
 
     reference operator* () const noexcept;
     pointer   operator->() const noexcept;
@@ -150,10 +150,10 @@ wrap_iter<Iterator>::wrap_iter(iterator_type other) noexcept : iterator_(other) 
 
 template <typename Iterator>
 template <typename OtherIterator>
-wrap_iter<Iterator>::wrap_iter(wrap_iter<OtherIterator> const& other) : iterator_(other.base()) {}
+wrap_iter<Iterator>::wrap_iter(wrap_iter<OtherIterator> const& other) : iterator_(other.raw_ptr()) {}
 
 template <typename Iterator>
-typename wrap_iter<Iterator>::iterator_type wrap_iter<Iterator>::base() const noexcept {
+typename wrap_iter<Iterator>::iterator_type wrap_iter<Iterator>::raw_ptr() const noexcept {
     return iterator_;
 }
 
@@ -206,12 +206,12 @@ wrap_iter<Iterator>& wrap_iter<Iterator>::operator--() noexcept {
 
 template <typename Iterator1, typename Iterator2>
 inline bool operator==(wrap_iter<Iterator1> const& x, wrap_iter<Iterator2> const& y) noexcept {
-    return x.base() == y.base();
+    return x.raw_ptr() == y.raw_ptr();
 }
 
 template <typename Iterator1, typename Iterator2>
 inline bool operator<(wrap_iter<Iterator1> const& x, wrap_iter<Iterator2> const& y) noexcept {
-    return x.base() < y.base();
+    return x.raw_ptr() < y.raw_ptr();
 }
 
 template <typename Iterator1, typename Iterator2>
@@ -227,7 +227,7 @@ inline bool operator>(wrap_iter<Iterator1> const& x, wrap_iter<Iterator2> const&
 template <typename Iterator1, typename Iterator2>
 inline typename wrap_iter<Iterator1>::difference_type operator-(wrap_iter<Iterator1> const& x,
                                                                 wrap_iter<Iterator2> const& y) noexcept {
-    return x.base() - y.base();
+    return x.raw_ptr() - y.raw_ptr();
 }
 
 template <typename Iterator1>
