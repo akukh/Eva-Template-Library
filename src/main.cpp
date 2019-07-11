@@ -1,10 +1,20 @@
+#include <algorithm>
 #include <iostream>
+#include <type_traits>
+#include <vector>
 
 #include "../include/vector.hpp"
 
 int main() {
     etl::vector<int> v1(3, 2019);
 
+/*
+    etl::vector<int> v2(3, 2019);
+    std::vector<int>::iterator;
+
+    std::cout << std::boolalpha << etl::is_convertible<int, int*>::value << std::endl;
+    std::cout << std::boolalpha << std::is_convertible<decltype(v2.begin()), int*>::value << std::endl;
+*/
 #if 1
     v1.push_back(5);
     v1.push_back(1);

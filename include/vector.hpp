@@ -4,6 +4,11 @@
 #include "iterator.hpp"
 #include "memory.hpp"
 
+#include <cxxabi.h>
+#include <exception>
+#include <iostream>
+#include <typeinfo>
+
 namespace etl {
 
 template <typename Type, typename Allocator>
@@ -31,12 +36,13 @@ struct vector_base {
     vector_base(vector_base const& other) = delete;
     vector_base& operator=(vector_base const& other) = delete;
 
-    vector_base(vector_base&& other) noexcept;
-    vector_base& operator=(vector_base&& other) noexcept;
+    vector_base(vector_base&& other) NOEXCEPT;
+    vector_base& operator=(vector_base&& other) NOEXCEPT;
 
-    void clear() noexcept;
+    void clear() NOEXCEPT;
 
-    void destruct_at_end(pointer new_last) noexcept;
+    void destruct_at_end(pointer new_end) NOEXCEPT;
+
     void copy_assign_alloc(vector_base const& other);
 
     void swap(vector_base& other);
@@ -61,32 +67,30 @@ public:
     // TODO:
     //  implement reverse iterators
 
-    explicit vector(allocator_type const& allocator = A()) noexcept;
+    vector(allocator_type const& allocator = A()) NOEXCEPT;
     explicit vector(size_type const n, const_reference value = T(), allocator_type const& allocator = A());
 
     vector(vector const& other);
     vector& operator=(vector const& other);
 
-    vector(vector&& other) noexcept;
-    vector& operator=(vector&& other) noexcept;
+    vector(vector&& other) NOEXCEPT;
+    vector& operator=(vector&& other) NOEXCEPT;
 
-    ~vector();
+    iterator       begin() NOEXCEPT;
+    const_iterator begin() const NOEXCEPT;
 
-    iterator       begin() noexcept;
-    const_iterator begin() const noexcept;
+    iterator       end() NOEXCEPT;
+    const_iterator end() const NOEXCEPT;
 
-    iterator       end() noexcept;
-    const_iterator end() const noexcept;
+    size_type size() const NOEXCEPT;
+    size_type capacity() const NOEXCEPT;
 
-    size_type size() const noexcept;
-    size_type capacity() const noexcept;
-
-    bool empty() const noexcept;
+    bool empty() const NOEXCEPT;
 
     void reserve(size_type const n);
     void resize(size_type const n, const_reference value = T());
 
-    void clear() noexcept;
+    void clear() NOEXCEPT;
 
     template <typename InputIterator>
     void assign(InputIterator first, InputIterator last);
@@ -101,16 +105,20 @@ public:
     // clang-format off
     template <typename InputIterator>
     typename enable_if<
-        is_input_iterator<InputIterator>::value, 
+        is_input_iterator<InputIterator>::value &&
+        is_constructible<
+            value_type, 
+            typename iterator_traits<InputIterator>::reference
+        >::value,
         iterator
     >::type insert(const_iterator position, InputIterator first, InputIterator last);
-    // clang-format on
+    // clang-format off
 
     reference       operator[](size_type const n);
     const_reference operator[](size_type const n) const;
 
 private:
-    void destroy_elements() noexcept;
+    void destroy_elements() NOEXCEPT;
 
     void move_range_on(size_type const offset, pointer to);
 
@@ -129,33 +137,36 @@ vector_base<Type, Allocator>::vector_base(allocator_type const& allocator, size_
 
 template <typename Type, typename Allocator>
 vector_base<Type, Allocator>::~vector_base() {
-    allocator_.deallocate(begin_, end_ - begin_);
+    if (nullptr != begin_) {
+        clear();
+        allocator_.deallocate(begin_, capacity_ - begin_);
+    }
 }
 
 template <typename Type, typename Allocator>
-vector_base<Type, Allocator>::vector_base(vector_base&& other) noexcept
+vector_base<Type, Allocator>::vector_base(vector_base&& other) NOEXCEPT 
     : allocator_(other.allocator_), begin_(other.begin_), capacity_(other.capacity_), end_(other.end_) {
     other.begin_ = other.end_ = other.capacity_ = nullptr;
 }
 
 template <typename Type, typename Allocator>
-vector_base<Type, Allocator>& vector_base<Type, Allocator>::operator=(vector_base&& other) noexcept {
+vector_base<Type, Allocator>& vector_base<Type, Allocator>::operator=(vector_base&& other) NOEXCEPT {
     std::swap(*this, other);
     return *this;
 }
 
 template <typename Type, typename Allocator>
-void vector_base<Type, Allocator>::clear() noexcept {
+void vector_base<Type, Allocator>::clear() NOEXCEPT {
     destruct_at_end(begin_);
 }
 
 template <typename Type, typename Allocator>
-void vector_base<Type, Allocator>::destruct_at_end(pointer new_last) noexcept {
+void vector_base<Type, Allocator>::destruct_at_end(pointer new_end) NOEXCEPT {
     pointer soon_to_be_end = end_;
-    while (new_last != soon_to_be_end) {
-        alloc_traits::destroy(allocator_, --soon_to_be_end);
+    while (soon_to_be_end-- > new_end) {
+        alloc_traits::destroy(allocator_, soon_to_be_end);
     }
-    end_ = new_last;
+    end_ = new_end;
 }
 
 template <typename Type, typename Allocator>
@@ -182,7 +193,7 @@ void vector_base<Type, Allocator>::swap(vector_base& other) {
 namespace etl {
 
 template <typename T, typename A>
-vector<T, A>::vector(allocator_type const& allocator) noexcept : base(allocator, 0) {}
+vector<T, A>::vector(allocator_type const& allocator) NOEXCEPT : base(allocator, 0) {}
 
 template <typename T, typename A>
 vector<T, A>::vector(size_type const n, const_reference value, allocator_type const& allocator) : base(allocator, n) {
@@ -191,9 +202,7 @@ vector<T, A>::vector(size_type const n, const_reference value, allocator_type co
             base::allocator_.construct(base::end_++, std::move(value));
         }
     } catch (...) {
-        while (base::end_-- > base::begin_) {
-            base::allocator_.destroy(base::end_);
-        }
+        clear();
         throw;
     }
 }
@@ -208,9 +217,7 @@ vector<T, A>::vector(vector const& other) : base(other.allocator_, other.size())
             base::allocator_.construct(base::end_++, *first);
         }
     } catch (...) {
-        while (base::end_-- > base::begin_) {
-            base::allocator_.destroy(base::end_);
-        }
+        clear();
         throw;
     }
 }
@@ -225,52 +232,47 @@ vector<T, A>& vector<T, A>::operator=(vector const& other) {
 }
 
 template <typename T, typename A>
-vector<T, A>::vector(vector&& other) noexcept : base(std::move(other)) {}
+vector<T, A>::vector(vector&& other) NOEXCEPT : base(std::move(other)) {}
 
 template <typename T, typename A>
-vector<T, A>& vector<T, A>::operator=(vector&& other) noexcept {
+vector<T, A>& vector<T, A>::operator=(vector&& other) NOEXCEPT {
     clear();
     std::swap(*this, other);
     return *this;
 }
 
 template <typename T, typename A>
-vector<T, A>::~vector() {
-    destroy_elements();
-}
-
-template <typename T, typename A>
-typename vector<T, A>::iterator vector<T, A>::begin() noexcept {
+typename vector<T, A>::iterator vector<T, A>::begin() NOEXCEPT {
     return iterator(base::begin_);
 }
 
 template <typename T, typename A>
-typename vector<T, A>::const_iterator vector<T, A>::begin() const noexcept {
+typename vector<T, A>::const_iterator vector<T, A>::begin() const NOEXCEPT {
     return const_iterator(base::begin_);
 }
 
 template <typename T, typename A>
-typename vector<T, A>::iterator vector<T, A>::end() noexcept {
+typename vector<T, A>::iterator vector<T, A>::end() NOEXCEPT {
     return iterator(base::end_);
 }
 
 template <typename T, typename A>
-typename vector<T, A>::const_iterator vector<T, A>::end() const noexcept {
+typename vector<T, A>::const_iterator vector<T, A>::end() const NOEXCEPT {
     return const_iterator(base::end_);
 }
 
 template <typename T, typename A>
-typename vector<T, A>::size_type vector<T, A>::size() const noexcept {
+typename vector<T, A>::size_type vector<T, A>::size() const NOEXCEPT {
     return static_cast<size_type>(base::end_ - base::begin_);
 }
 
 template <typename T, typename A>
-typename vector<T, A>::size_type vector<T, A>::capacity() const noexcept {
+typename vector<T, A>::size_type vector<T, A>::capacity() const NOEXCEPT {
     return base::capacity_ - base::begin_;
 }
 
 template <typename T, typename A>
-bool vector<T, A>::empty() const noexcept {
+bool vector<T, A>::empty() const NOEXCEPT {
     return base::end_ == base::begin_;
 }
 
@@ -293,7 +295,7 @@ void vector<T, A>::resize(size_type const n, const_reference value) {
 }
 
 template <typename T, typename A>
-void vector<T, A>::clear() noexcept {
+void vector<T, A>::clear() NOEXCEPT {
     base::clear();
 }
 
@@ -367,8 +369,12 @@ typename vector<T, A>::iterator vector<T, A>::insert(const_iterator  position,
 // clang-format off
 template <typename T, typename A>
 template <typename InputIterator>
-typename enable_if <
-    is_input_iterator<InputIterator>::value, 
+typename enable_if<
+    is_input_iterator<InputIterator>::value &&
+    is_constructible<
+        typename vector<T, A>::value_type, 
+        typename iterator_traits<InputIterator>::reference
+    >::value,
     typename vector<T, A>::iterator
 >::type vector<T, A>::insert(const_iterator position, InputIterator first, InputIterator last) {
     size_type const offset         = position - begin();
@@ -383,19 +389,18 @@ typename enable_if <
         move_range_on(required_space, p);
         for (pointer it = p; it != p + required_space && first != last; ++first) {
             base::allocator_.construct(it++, std::move(*first));
-            base::allocator_.destroy(&*first);
+            // base::allocator_.destroy(first);
         }
     } else {
         reserve_n_fill(required_space + size() + 8, p, [this, &first, &last](auto& end) {
             for (; first != last; ++first) {
                 base::allocator_.construct(end++, std::move(*first));
-                base::allocator_.destroy(&*first);
+                // base::allocator_.destroy(first);
             }
         });
     }
     return begin() + offset;
 }
-// clang-format on
 
 template <typename T, typename A>
 typename vector<T, A>::reference vector<T, A>::operator[](size_type const n) {
@@ -409,15 +414,6 @@ typename vector<T, A>::const_reference vector<T, A>::operator[](size_type const 
     return base::begin_[n];
 }
 
-template <typename T, typename A>
-void vector<T, A>::destroy_elements() noexcept {
-    for (pointer it = base::begin_; it != base::capacity_; ++it) {
-        base::allocator_.destroy(it);
-    }
-    base::capacity_ = base::begin_;
-}
-
-// clang-format off
 template <typename T, typename A>
 void vector<T, A>::move_range_on(size_type const offset, pointer to) {
     /*  Example:
