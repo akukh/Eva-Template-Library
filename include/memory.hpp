@@ -67,8 +67,8 @@ struct allocator {
     template <typename U> 
     CONSTEXPR allocator(allocator<U> const&) NOEXCEPT {}
 
-    [[nodiscard]] pointer allocate(size_type const n);
-    void                  deallocate(pointer p, [[maybe_unused]] size_type const n) NOEXCEPT;
+    NODISCARD pointer allocate(size_type const n);
+    void              deallocate(pointer p, MAYBE_UNUSED size_type const n) NOEXCEPT;
 
     template <typename U, typename... Args> 
     void construct(U* p, Args&&... args);
@@ -90,7 +90,7 @@ inline bool operator!=(const allocator<T>&, const allocator<U>&) NOEXCEPT { retu
 namespace etl {
 
 template <typename T>
-[[nodiscard]] typename allocator<T>::pointer allocator<T>::allocate(size_type const n) {
+NODISCARD typename allocator<T>::pointer allocator<T>::allocate(size_type const n) {
     if (n > max_size()) {
         throw "bad_alloc"; // TODO: throw bad_alloc()
     }
@@ -98,7 +98,7 @@ template <typename T>
 }
 
 template <typename T>
-void allocator<T>::deallocate(pointer p, [[maybe_unused]] size_type const n) NOEXCEPT {
+void allocator<T>::deallocate(pointer p, MAYBE_UNUSED size_type const n) NOEXCEPT {
     ::operator delete(p);
 }
 

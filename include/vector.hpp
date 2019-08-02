@@ -33,8 +33,8 @@ struct vector_base {
     vector_base(allocator_type const& allocator, size_type const n);
     ~vector_base();
 
-    vector_base(vector_base const& other) = delete;
-    vector_base& operator=(vector_base const& other) = delete;
+    vector_base(vector_base const& other) DELETE;
+    vector_base& operator=(vector_base const& other) DELETE;
 
     vector_base(vector_base&& other) NOEXCEPT;
     vector_base& operator=(vector_base&& other) NOEXCEPT;
