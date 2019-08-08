@@ -193,13 +193,13 @@ void vector_base<Type, Allocator>::swap(vector_base& other) {
 namespace etl {
 
 template <typename T, typename A>
-vector<T, A>::vector(allocator_type const& allocator) NOEXCEPT : base(allocator, 0) {}
+vector<T, A>::vector(allocator_type const& allocator) NOEXCEPT : base(allocator, 8) {}
 
 template <typename T, typename A>
 vector<T, A>::vector(size_type const n, const_reference value, allocator_type const& allocator) : base(allocator, n) {
     try {
         for (size_type i = 0; i < n; ++i) {
-            base::allocator_.construct(base::end_++, std::move(value));
+            base::allocator_.construct(base::end_++, MOVE(value));
         }
     } catch (...) {
         clear();
@@ -232,7 +232,7 @@ vector<T, A>& vector<T, A>::operator=(vector const& other) {
 }
 
 template <typename T, typename A>
-vector<T, A>::vector(vector&& other) NOEXCEPT : base(std::move(other)) {}
+vector<T, A>::vector(vector&& other) NOEXCEPT : base(MOVE(other)) {}
 
 template <typename T, typename A>
 vector<T, A>& vector<T, A>::operator=(vector&& other) NOEXCEPT {
@@ -268,7 +268,7 @@ typename vector<T, A>::size_type vector<T, A>::size() const NOEXCEPT {
 
 template <typename T, typename A>
 typename vector<T, A>::size_type vector<T, A>::capacity() const NOEXCEPT {
-    return base::capacity_ - base::begin_;
+    return static_cast<size_type>(base::capacity_ - base::begin_);
 }
 
 template <typename T, typename A>
@@ -287,7 +287,7 @@ void vector<T, A>::resize(size_type const n, const_reference value) {
     if (current_size < n) {
         reserve(n);
         for (size_type i = 0; i < n - current_size; i++) {
-            base::allocator_.construct(base::end_++, std::move(value));
+            base::allocator_.construct(base::end_++, MOVE(value));
         }
     } else {
         base::destruct_at_end(base::begin_ + n);
@@ -327,15 +327,17 @@ typename vector<T, A>::iterator vector<T, A>::insert(const_iterator position, co
 
     if (base::end_ < base::capacity_) {
         if (p == base::end_) {
-            base::allocator_.construct(base::end_++, std::move(value));
+            alloc_traits::construct(base::allocator_, base::end_++, MOVE(value));
         } else {
             move_range_on(1, p);
-            base::allocator_.construct(p, std::move(value));
+            alloc_traits::construct(base::allocator_, p, MOVE(value));
         }
     } else {
-        reserve_n_fill(size() ? 2 * size() : 8, p, [this, &value](auto& end) {
-            base::allocator_.construct(end++, std::move(value));
-        });
+        base tmp(base::allocator_, size() ? 2 * size() : 8);
+        pointer first = tmp.end_ = tmp.begin_ + offset;
+        alloc_traits::construct(base::allocator_, tmp.end_++, MOVE(value));
+        alloc_traits::construct_backward(base::allocator_, base::begin_, base::end_, first);
+        base::swap(tmp);
     }
     return begin() + offset;
 }
@@ -356,12 +358,12 @@ typename vector<T, A>::iterator vector<T, A>::insert(const_iterator  position,
     if (count <= free_space) {
         move_range_on(count, p);
         for (; p != base::begin_ + count; ++p) {
-            base::allocator_.construct(p, std::move(value));
+            alloc_traits::construct(base::allocator_, p, MOVE(value));
         }
     } else {
         reserve_n_fill(count + size() + 8, p, [this, &count, &value](auto& end) {
             for (size_type i = 0; i < count; ++i) {
-                base::allocator_.construct(end++, std::move(value));
+                base::allocator_.construct(end++, MOVE(value));
             }
         });
     }
@@ -390,13 +392,13 @@ typename enable_if<
     if (required_space <= free_space) {
         move_range_on(required_space, p);
         for (pointer it = p; it != p + required_space && first != last; ++first) {
-            base::allocator_.construct(it++, std::move(*first));
+            base::allocator_.construct(it++, MOVE(*first));
             // base::allocator_.destroy(first);
         }
     } else {
         reserve_n_fill(required_space + size() + 8, p, [this, &first, &last](auto& end) {
             for (; first != last; ++first) {
-                base::allocator_.construct(end++, std::move(*first));
+                base::allocator_.construct(end++, MOVE(*first));
                 // base::allocator_.destroy(first);
             }
         });
@@ -434,7 +436,7 @@ void vector<T, A>::move_range_on(size_type const offset, pointer to) {
     pointer last = from + offset;
 
     while (from-- > to) {
-        base::allocator_.construct(--last, std::move(*from));
+        base::allocator_.construct(--last, MOVE(*from));
         base::allocator_.destroy(from);
     }
     base::end_ += offset;
@@ -450,7 +452,7 @@ void vector<T, A>::reserve_n_fill(size_type const n, const_pointer position, Fil
     for (pointer it = base::begin_; it != base::end_; ++it) {
         if (it == position) 
             filler(tmp.end_);
-        base::allocator_.construct(tmp.end_++, std::move(*it));
+        base::allocator_.construct(tmp.end_++, MOVE(*it));
         base::allocator_.destroy(it);
     }
     base::swap(tmp);

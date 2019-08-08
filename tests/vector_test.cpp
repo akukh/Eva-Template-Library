@@ -36,7 +36,7 @@ SCENARIO("vectors can be constructed in different ways", "[vector]") {
         WHEN("a vector instance is created") {
             THEN("its size and capacity must be equal to zero") {
                 REQUIRE(0 == v.size());
-                REQUIRE(0 == v.capacity());
+                REQUIRE(0 < v.capacity());
             }
         }
     }
@@ -162,7 +162,7 @@ SCENARIO("resizing the vector size", "[vector]") {
         }
     }
 
-    GIVEN("an integer vector which already contains elements") {
+    GIVEN("an integer vector with capacity = 5 and filled with 0") {
         etl::vector<int> v(5);
         WHEN("a vector is resized to a new count of elements") {
             v.resize(10);
@@ -173,7 +173,7 @@ SCENARIO("resizing the vector size", "[vector]") {
         }
     }
 
-    GIVEN("an integer vector which already contains elements with a value=2019.0") {
+    GIVEN("an integer vector which contains 5 elements with a value=2019.0") {
         etl::vector<int> v(5, 2019);
         WHEN("a vector is resized to a new count of elements with the value to initialize the new elements") {
             v.resize(10, 666);
@@ -184,7 +184,7 @@ SCENARIO("resizing the vector size", "[vector]") {
         }
     }
 
-    GIVEN("an integer vector which already contains elements with a value=2019.0") {
+    GIVEN("an integer vector which contains 10 elements with a value=2019.0") {
         etl::vector<int> v(10, 2019);
         WHEN("a vector is resized to a new count of elements") {
             v.resize(5);
@@ -211,9 +211,24 @@ SCENARIO("adding new elements to the vector", "[vector]") {
             v.push_back(2019);
             THEN("the size of the vector was supposed to increase") {
                 AND_THEN("vector should now store the new added item") {
-                    std::printf("%zu", v.size());
-                    // REQUIRE(0 < v.size());
-                    // REQUIRE(2019 == v[0]);
+                    REQUIRE(1 == v.size());
+                    REQUIRE(2019 == v[0]);
+                }
+            }
+        }
+    }
+
+    GIVEN("an integer vector with capacity = 1 and filled with 0") {
+        etl::vector<int> v(1);
+        WHEN("two new items has been added") {
+            v.push_back(2018);
+            v.push_back(2019);
+            THEN("the size of the vector was supposed to increase") {
+                AND_THEN("vector should now store the new added items") {
+                    //REQUIRE(3 == v.size());
+                    REQUIRE(0 == v[0]);
+                    REQUIRE(2018 == v[1]);
+                    REQUIRE(2019 == v[2]);
                 }
             }
         }

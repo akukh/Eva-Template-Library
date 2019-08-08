@@ -177,6 +177,15 @@ public:
 template <typename T, typename U, bool = has_rebind<T, U>::value>
 struct pointer_traits_rebind { typedef typename T::template rebind<U>::other type; };
 
+namespace details {
+
+template <typename T>
+T* to_raw_pointer(T* p) NOEXCEPT {
+    return p;
+}
+
+} // details
+
 template <typename Pointer>
 struct pointer_traits {
     typedef Pointer                                             pointer;
@@ -184,6 +193,10 @@ struct pointer_traits {
 
     template <typename U> 
     struct rebind { typedef typename pointer_traits_rebind<pointer, U>::type other; };
+
+    static element_type* to_raw_pointer(pointer p) NOEXCEPT {
+        return details::to_raw_pointer(p.operator->());
+    }
 };
 
 template <typename T>
@@ -193,6 +206,10 @@ struct pointer_traits<T*> {
 
     template <typename U> 
     struct rebind { typedef U* other; };
+
+    static element_type* to_raw_pointer(pointer p) NOEXCEPT {
+        return details::to_raw_pointer(p);
+    }
 };
 
 template <typename Pointer, bool = has_difference_type<Pointer>::value>

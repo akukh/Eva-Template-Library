@@ -6,7 +6,7 @@
 #include "../include/vector.hpp"
 
 int main() {
-    etl::vector<int> v1(3, 2019);
+    etl::vector<int> v1(1); // (3, 2019);
 
 /*
     etl::vector<int> v2(3, 2019);

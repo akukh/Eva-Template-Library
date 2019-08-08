@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <utility>
 
 #include "type_traits.hpp"
 
@@ -53,6 +54,11 @@ struct allocator_traits {
 
     static void construct(allocator_type& a, pointer p, value_type const& value);
     static void destroy(allocator_type& a, pointer p);
+
+    template <typename Ptr>
+    static void construct_forward(allocator_type& a, Ptr begin, Ptr end, Ptr& d_begin);
+    template <typename Ptr>
+    static void construct_backward(allocator_type& a, Ptr begin, Ptr end, Ptr& d_end);
 };
 
 template <typename T>
@@ -85,6 +91,48 @@ template <typename T, typename U>
 inline bool operator!=(const allocator<T>&, const allocator<U>&) NOEXCEPT { return false; }
 
 } // namespace etl
+
+// Allocator traits implementation:
+namespace etl {
+
+template <typename Allocator>
+typename allocator_traits<Allocator>::pointer allocator_traits<Allocator>::allocate(allocator_type& a, size_type n) { 
+    return a.allocate(n); 
+}
+
+template <typename Allocator>
+void allocator_traits<Allocator>::deallocate(allocator_type& a, pointer p, size_type n) NOEXCEPT { 
+    a.deallocate(p, n); 
+}
+
+template <typename Allocator>
+void allocator_traits<Allocator>::construct(allocator_type& a, pointer p, value_type const& value) { 
+    a.construct(p, value); 
+}
+
+template <typename Allocator>
+void allocator_traits<Allocator>::destroy(allocator_type& a, pointer p) { 
+    a.destroy(p); 
+}
+
+template <typename Allocator>
+template <typename Ptr>
+void allocator_traits<Allocator>::construct_forward(allocator_type& a, Ptr begin, Ptr end, Ptr& d_begin) {
+    for (; end != begin; ++begin, ++d_begin) {
+        construct(a, pointer_traits<Ptr>::to_raw_pointer(d_begin), MOVE(*begin));
+    }
+}
+
+template <typename Allocator>
+template <typename Ptr>
+void allocator_traits<Allocator>::construct_backward(allocator_type& a, Ptr begin, Ptr end, Ptr& d_end) {
+    while (end != begin) {
+        construct(a, pointer_traits<Ptr>::to_raw_pointer(--d_end), MOVE(*--end));
+    }
+}
+
+} // namespace etl
+// Allocator traits implementation
 
 // Allocator implementation:
 namespace etl {
@@ -119,31 +167,6 @@ typename allocator<T>::size_type allocator<T>::max_size() const NOEXCEPT {
     return size_type(~0) / sizeof(value_type);
 }
 
+
 } // namespace etl
 // Allocator implementation
-
-// Allocator traits implementation:
-namespace etl {
-
-template <typename Allocator>
-typename allocator_traits<Allocator>::pointer allocator_traits<Allocator>::allocate(allocator_type& a, size_type n) { 
-    return a.allocate(n); 
-}
-
-template <typename Allocator>
-void allocator_traits<Allocator>::deallocate(allocator_type& a, pointer p, size_type n) NOEXCEPT { 
-    a.deallocate(p, n); 
-}
-
-template <typename Allocator>
-void allocator_traits<Allocator>::construct(allocator_type& a, pointer p, value_type const& value) { 
-    a.construct(p, value); 
-}
-
-template <typename Allocator>
-void allocator_traits<Allocator>::destroy(allocator_type& a, pointer p) { 
-    a.destroy(p); 
-}
-
-} // namespace etl
-// Allocator traits implementation

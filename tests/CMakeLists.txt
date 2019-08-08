@@ -62,6 +62,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${Catch2_INCLUDE_DIR})
 
 target_link_libraries(${PROJECT_NAME} EvaTemplateLibrary)
 
-#add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD COMMAND "$<TARGET_FILE:${PROJECT_NAME}>")
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD COMMAND "$<TARGET_FILE:${PROJECT_NAME}>")
 
 add_dependencies(${PROJECT_NAME} Catch2)
