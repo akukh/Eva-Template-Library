@@ -3,6 +3,7 @@
 #include "../include/vector.hpp"
 
 namespace {
+
 // clang-format off
 // NOTE:
 //  minimal allocator with debug output for Unit Tests only.
@@ -25,6 +26,7 @@ template <typename T> struct UT_allocator {
     template <typename U>                   void destroy(U* p) noexcept {}
 };
 // clang-format on
+
 } // namespace
 
 SCENARIO("vectors can be constructed in different ways", "[vector]") {
@@ -147,7 +149,7 @@ SCENARIO("vector capacity can be increased and decreased", "[vector]") {
     }
 }
 
-SCENARIO("resizing the vector to contain count elements", "[vector]") {
+SCENARIO("resizing the vector size", "[vector]") {
 
     GIVEN("an empty vector of integer values") {
         etl::vector<int> v;
@@ -196,6 +198,23 @@ SCENARIO("resizing the vector to contain count elements", "[vector]") {
             THEN("since size is less than new count, additional copies of value are appended") {
                 REQUIRE(15 == v.size());
                 REQUIRE(15 == v.capacity());
+            }
+        }
+    }
+}
+
+SCENARIO("adding new elements to the vector", "[vector]") {
+
+    GIVEN("an empty vector of integer values") {
+        etl::vector<int> v;
+        WHEN("a new item has been added") {
+            v.push_back(2019);
+            THEN("the size of the vector was supposed to increase") {
+                AND_THEN("vector should now store the new added item") {
+                    std::printf("%zu", v.size());
+                    // REQUIRE(0 < v.size());
+                    // REQUIRE(2019 == v[0]);
+                }
             }
         }
     }

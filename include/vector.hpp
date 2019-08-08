@@ -344,6 +344,8 @@ template <typename T, typename A>
 typename vector<T, A>::iterator vector<T, A>::insert(const_iterator  position,
                                                      size_type const count,
                                                      const_reference value) {
+    assert(count > 0 && "count was equal to zero!");
+
     size_type const offset     = position - begin();
     size_type const free_space = base::capacity_ - base::end_;
     pointer         p          = base::begin_ + offset;
