@@ -199,7 +199,7 @@ template <typename T, typename A>
 vector<T, A>::vector(size_type const n, const_reference value, allocator_type const& allocator) : base(allocator, n) {
     try {
         for (size_type i = 0; i < n; ++i) {
-            base::allocator_.construct(base::end_++, MOVE(value));
+            alloc_traits::construct(base::allocator_, base::end_++, MOVE(value));
         }
     } catch (...) {
         clear();
@@ -214,7 +214,7 @@ vector<T, A>::vector(vector const& other) : base(other.allocator_, other.size())
         pointer last  = other.end_;
 
         for (; first != last; ++first) {
-            base::allocator_.construct(base::end_++, *first);
+            alloc_traits::construct(base::allocator_, base::end_++, *first);
         }
     } catch (...) {
         clear();
@@ -287,7 +287,7 @@ void vector<T, A>::resize(size_type const n, const_reference value) {
     if (current_size < n) {
         reserve(n);
         for (size_type i = 0; i < n - current_size; i++) {
-            base::allocator_.construct(base::end_++, MOVE(value));
+            alloc_traits::construct(base::allocator_, base::end_++, MOVE(value));
         }
     } else {
         base::destruct_at_end(base::begin_ + n);
@@ -346,7 +346,7 @@ template <typename T, typename A>
 typename vector<T, A>::iterator vector<T, A>::insert(const_iterator  position,
                                                      size_type const count,
                                                      const_reference value) {
-    assert(count > 0 && "count was equal to zero!");
+    assert(count > 0 && "must be greater than zero");
 
     size_type const offset     = position - begin();
     size_type const free_space = base::capacity_ - base::end_;
@@ -363,7 +363,7 @@ typename vector<T, A>::iterator vector<T, A>::insert(const_iterator  position,
     } else {
         reserve_n_fill(count + size() + 8, p, [this, &count, &value](auto& end) {
             for (size_type i = 0; i < count; ++i) {
-                base::allocator_.construct(end++, MOVE(value));
+                alloc_traits::construct(base::allocator_, end++, MOVE(value));
             }
         });
     }
@@ -392,13 +392,13 @@ typename enable_if<
     if (required_space <= free_space) {
         move_range_on(required_space, p);
         for (pointer it = p; it != p + required_space && first != last; ++first) {
-            base::allocator_.construct(it++, MOVE(*first));
+            alloc_traits::construct(base::allocator_, it++, MOVE(*first));
             // base::allocator_.destroy(first);
         }
     } else {
         reserve_n_fill(required_space + size() + 8, p, [this, &first, &last](auto& end) {
             for (; first != last; ++first) {
-                base::allocator_.construct(end++, MOVE(*first));
+                alloc_traits::construct(base::allocator_, end++, MOVE(*first));
                 // base::allocator_.destroy(first);
             }
         });
@@ -428,7 +428,7 @@ void vector<T, A>::move_range_on(size_type const offset, pointer to) {
               ↑ - to              ↑ - last
      */
 
-    assert(to);
+    assert(to && "must be non-nullptr");
     if (base::end_ == to) 
         return;
 
@@ -436,7 +436,7 @@ void vector<T, A>::move_range_on(size_type const offset, pointer to) {
     pointer last = from + offset;
 
     while (from-- > to) {
-        base::allocator_.construct(--last, MOVE(*from));
+        alloc_traits::construct(base::allocator_, --last, MOVE(*from));
         base::allocator_.destroy(from);
     }
     base::end_ += offset;
@@ -452,7 +452,7 @@ void vector<T, A>::reserve_n_fill(size_type const n, const_pointer position, Fil
     for (pointer it = base::begin_; it != base::end_; ++it) {
         if (it == position) 
             filler(tmp.end_);
-        base::allocator_.construct(tmp.end_++, MOVE(*it));
+        alloc_traits::construct(base::allocator_, tmp.end_++, MOVE(*it));
         base::allocator_.destroy(it);
     }
     base::swap(tmp);
