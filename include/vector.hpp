@@ -13,6 +13,7 @@ namespace etl {
 
 template <typename Type, typename Allocator>
 struct vector_base {
+protected:
     typedef Type                                   value_type;
     typedef Allocator                              allocator_type;
     typedef allocator_traits<allocator_type>       alloc_traits;
