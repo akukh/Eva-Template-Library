@@ -49,13 +49,13 @@ protected:
     void swap(vector_base& other);
 };
 
-template <typename T, typename A = allocator<T>>
-class vector : private vector_base<T, A> {
-    typedef vector_base<T, A> base;
+template <typename Type, typename Allocator = allocator<Type>>
+class vector : private vector_base<Type, Allocator> {
+    typedef vector_base<Type, Allocator> base;
 
 public:
-    typedef T                              value_type;
-    typedef A                              allocator_type;
+    typedef Type                           value_type;
+    typedef Allocator                      allocator_type;
     typedef typename base::alloc_traits    alloc_traits;
     typedef typename base::size_type       size_type;
     typedef typename base::difference_type difference_type;
@@ -68,8 +68,8 @@ public:
     // TODO:
     //  implement reverse iterators
 
-    vector(allocator_type const& allocator = A()) NOEXCEPT;
-    explicit vector(size_type const n, const_reference value = T(), allocator_type const& allocator = A());
+    vector(allocator_type const& allocator = Allocator()) NOEXCEPT;
+    explicit vector(size_type const n, const_reference value = Type(), allocator_type const& allocator = Allocator());
 
     vector(vector const& other);
     vector& operator=(vector const& other);
@@ -113,7 +113,6 @@ public:
         >::value,
         iterator
     >::type insert(const_iterator position, InputIterator first, InputIterator last);
-    // clang-format off
 
     reference       operator[](size_type const n);
     const_reference operator[](size_type const n) const;
