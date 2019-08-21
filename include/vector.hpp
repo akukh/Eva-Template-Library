@@ -336,7 +336,8 @@ typename vector<T, A>::iterator vector<T, A>::insert(const_iterator position, co
         base tmp(base::allocator_, size() ? 2 * size() : 8);
         pointer first = tmp.end_ = tmp.begin_ + offset;
         alloc_traits::construct(base::allocator_, tmp.end_++, MOVE(value));
-        alloc_traits::construct_backward(base::allocator_, base::begin_, base::end_, first);
+        alloc_traits::construct_backward(base::allocator_, base::begin_, p, first);
+        alloc_traits::construct_forward(base::allocator_, p, base::end_, first);
         base::swap(tmp);
     }
     return begin() + offset;
@@ -429,15 +430,14 @@ void vector<T, A>::move_range_on(size_type const offset, pointer to) {
      */
 
     assert(to && "must be non-nullptr");
-    if (base::end_ == to) 
-        return;
+    assert(base::end_ != to && "can't be the last element");
 
     pointer from = base::end_;
     pointer last = from + offset;
 
     while (from-- > to) {
         alloc_traits::construct(base::allocator_, --last, MOVE(*from));
-        base::allocator_.destroy(from);
+        alloc_traits::destroy(base::allocator_, from);
     }
     base::end_ += offset;
 }
