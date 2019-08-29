@@ -238,3 +238,4 @@ inline wrap_iter<Iterator1> operator+(typename wrap_iter<Iterator1>::difference_
 }
 
 } // namespace etl
+// clang-format on

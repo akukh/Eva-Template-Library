@@ -48,7 +48,7 @@ struct vector_base {
 
     void swap(vector_base& other);
 
-    void roll_over(pointer position, const_reference value);
+    void relocate(size_type const size, size_type const offset, pointer position, const_reference value);
 };
 
 template <typename Type, typename Allocator = allocator<Type>>
@@ -192,19 +192,19 @@ void vector_base<Type, Allocator>::swap(vector_base& other) {
 }
 
 template <typename Type, typename Allocator>
-void vector_base<Type, Allocator>::roll_over(pointer position, const_reference value) {
+void vector_base<Type, Allocator>::relocate(size_type const size,
+                                            size_type const offset,
+                                            pointer         position,
+                                            const_reference value) {
     assert(position && "must be non-nullptr");
 
-    size_type const size   = end_ - begin_;
-    size_type const offset = position - begin_;
-
-    vector_base tmp(allocator_, size ? 2 * size : 8); // allocate new buffer
-    pointer first = tmp.end_ = tmp.begin_ + offset; // move the end to the insertion position
-                                                    // and save this position in `first`
-    alloc_traits::construct(allocator_, tmp.end_++, MOVE(value)); // construct on the specified position
+    vector_base tmp(allocator_, size);                                     // allocate new buffer
+    pointer     first = tmp.end_ = tmp.begin_ + offset;                    // move the end to the insertion position
+                                                                           // and save this position in `first`
+    alloc_traits::construct(allocator_, tmp.end_++, MOVE(value));          // construct on the specified position
     alloc_traits::construct_backward(allocator_, begin_, position, first); // copy all the elements that came before
     alloc_traits::construct_forward(allocator_, position, end_, tmp.end_); // copy all the elements that came after
-    swap(tmp); // swap buffers
+    swap(tmp);                                                             // swap buffers
 }
 
 } // namespace etl
@@ -357,7 +357,7 @@ typename vector<T, A>::iterator vector<T, A>::insert(const_iterator position, co
             alloc_traits::construct(base::allocator_, insert_position, MOVE(value));
         }
     } else {
-        base::roll_over(insert_position, value);
+        base::relocate(size() ? 2 * size() : 8, offset, insert_position, value);
         // base tmp(base::allocator_, size() ? 2 * size() : 8);
         // pointer first = tmp.end_ = tmp.begin_ + offset;
         // alloc_traits::construct(base::allocator_, tmp.end_++, MOVE(value));

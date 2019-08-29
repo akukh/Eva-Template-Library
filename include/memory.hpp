@@ -90,7 +90,6 @@ inline bool operator!=(const allocator<T>&, const allocator<U>&) NOEXCEPT { retu
 
 } // namespace etl
 
-// Allocator traits implementation:
 namespace etl {
 
 template <typename Allocator>
@@ -130,9 +129,7 @@ void allocator_traits<Allocator>::construct_backward(allocator_type& a, Ptr begi
 }
 
 } // namespace etl
-// Allocator traits implementation
 
-// Allocator implementation:
 namespace etl {
 
 template <typename T>
@@ -165,6 +162,5 @@ typename allocator<T>::size_type allocator<T>::max_size() const NOEXCEPT {
     return size_type(~0) / sizeof(value_type);
 }
 
-
 } // namespace etl
-// Allocator implementation
+// clang-format on
