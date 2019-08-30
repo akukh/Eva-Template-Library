@@ -33,3 +33,37 @@
 
 # Other
 *.DS_Store
+*.xccheckout
+*.moved-aside
+*.xcuserstate
+*.xcscmblueprint
+.syntastic_cpp_config
+.vs/
+.vscode/
+CppProperties.json
+Playground/CMake/
+Project/
+Project/CMake2/
+CMakeFiles/
+
+## Build generated
+build/
+DerivedData
+
+## Various settings
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata
+
+## Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+# CScope
+.tags*

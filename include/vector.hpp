@@ -42,12 +42,14 @@ struct vector_base {
 
     void clear() NOEXCEPT;
 
+    void construct_at_end(size_type const n, const_reference value) NOEXCEPT;
     void destruct_at_end(pointer new_end) NOEXCEPT;
 
     void copy_assign_alloc(vector_base const& other);
 
     void swap(vector_base& other);
 
+    void relocate(size_type const size, pointer position);
     void relocate(size_type const size, size_type const offset, pointer position, const_reference value);
 };
 
@@ -163,6 +165,13 @@ void vector_base<Type, Allocator>::clear() NOEXCEPT {
 }
 
 template <typename Type, typename Allocator>
+void vector_base<Type, Allocator>::construct_at_end(size_type const n, const_reference value) NOEXCEPT {
+    for (std::size_t i = n; i--; end_++) {
+        alloc_traits::construct(allocator_, end_, value);
+    }
+}
+
+template <typename Type, typename Allocator>
 void vector_base<Type, Allocator>::destruct_at_end(pointer new_end) NOEXCEPT {
     pointer soon_to_be_end = end_;
     while (soon_to_be_end-- > new_end) {
@@ -191,6 +200,16 @@ void vector_base<Type, Allocator>::swap(vector_base& other) {
     std::swap(other.capacity_, capacity_);
 }
 
+// clang-format on
+template <typename Type, typename Allocator>
+void vector_base<Type, Allocator>::relocate(size_type const size, pointer position) {
+    assert(position && "must be non-nullptr");
+
+    vector_base tmp(allocator_, size);
+    alloc_traits::construct_forward(allocator_, position, end_, tmp.end_);
+    swap(tmp);
+}
+
 template <typename Type, typename Allocator>
 void vector_base<Type, Allocator>::relocate(size_type const size,
                                             size_type const offset,
@@ -198,14 +217,15 @@ void vector_base<Type, Allocator>::relocate(size_type const size,
                                             const_reference value) {
     assert(position && "must be non-nullptr");
 
-    vector_base tmp(allocator_, size);                                     // allocate new buffer
-    pointer     first = tmp.end_ = tmp.begin_ + offset;                    // move the end to the insertion position
-                                                                           // and save this position in `first`
-    alloc_traits::construct(allocator_, tmp.end_++, MOVE(value));          // construct on the specified position
-    alloc_traits::construct_backward(allocator_, begin_, position, first); // copy all the elements that came before
-    alloc_traits::construct_forward(allocator_, position, end_, tmp.end_); // copy all the elements that came after
-    swap(tmp);                                                             // swap buffers
+    vector_base tmp(allocator_, size);
+    pointer     first = tmp.end_ = tmp.begin_ + offset;
+
+    alloc_traits::construct(allocator_, tmp.end_++, MOVE(value));
+    alloc_traits::construct_backward(allocator_, begin_, position, first);
+    alloc_traits::construct_forward(allocator_, position, end_, tmp.end_);
+    swap(tmp);
 }
+// clang-format off
 
 } // namespace etl
 // vector_base implementation end
@@ -302,18 +322,20 @@ bool vector<T, A>::empty() const NOEXCEPT {
 
 template <typename T, typename A>
 void vector<T, A>::reserve(size_type const n) {
-    reserve_n_fill(n, nullptr);
+    if (n > capacity()) 
+        base::relocate(n, base::begin_);
 }
 
 template <typename T, typename A>
 void vector<T, A>::resize(size_type const n, const_reference value) {
-    size_type const current_size = size();
-    if (current_size < n) {
-        reserve(n);
-        for (size_type i = 0; i < n - current_size; i++) {
-            alloc_traits::construct(base::allocator_, base::end_++, MOVE(value));
+    if (size() < n) {
+        if (capacity() >= n) {
+            base::construct_at_end(n, value);
+        } else {
+            base::relocate(n, base::begin_);
+            base::construct_at_end(n - size(), value);
         }
-    } else {
+    } else if (size() > n){
         base::destruct_at_end(base::begin_ + n);
     }
 }
