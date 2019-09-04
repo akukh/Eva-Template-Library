@@ -117,6 +117,7 @@ template <typename Ptr>
 void allocator_traits<Allocator>::construct_forward(allocator_type& a, Ptr begin, Ptr end, Ptr& d_begin) {
     for (; end != begin; ++begin, ++d_begin) {
         construct(a, pointer_traits<Ptr>::to_raw_pointer(d_begin), MOVE(*begin));
+        destroy(a, begin);
     }
 }
 
@@ -125,6 +126,7 @@ template <typename Ptr>
 void allocator_traits<Allocator>::construct_backward(allocator_type& a, Ptr begin, Ptr end, Ptr& d_end) {
     while (end != begin) {
         construct(a, pointer_traits<Ptr>::to_raw_pointer(--d_end), MOVE(*--end));
+        destroy(a, end);
     }
 }
 
