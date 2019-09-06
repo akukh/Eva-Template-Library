@@ -1,6 +1,7 @@
 #pragma once
 #include <cassert>
 
+#include "algorithm.hpp"
 #include "iterator.hpp"
 #include "memory.hpp"
 
@@ -13,7 +14,7 @@ namespace etl {
 
 template <typename Type, typename Allocator>
 struct vector_base {
-    // protected:
+protected:
     typedef Type                                   value_type;
     typedef Allocator                              allocator_type;
     typedef allocator_traits<allocator_type>       alloc_traits;
@@ -42,6 +43,8 @@ struct vector_base {
 
     void clear() NOEXCEPT;
 
+    template <typename Iterator>
+    void construct_at_end(Iterator first, Iterator last) NOEXCEPT;
     void construct_at_end(size_type const n, const_reference value) NOEXCEPT;
     void destruct_at_end(pointer new_end) NOEXCEPT;
 
@@ -49,10 +52,7 @@ struct vector_base {
 
     void swap(vector_base& other);
 
-    void relocate(size_type const size, pointer position);
-    void relocate(size_type const size, size_type const offset, pointer position, const_reference value);
-
-    void roll_elements_over(pointer position);
+    void roll_elements_from(pointer position, size_type const n);
     void roll_elements_over(pointer position, const_reference value, size_type const offset, size_type const n = 1);
 };
 
@@ -175,6 +175,14 @@ void vector_base<Type, Allocator>::construct_at_end(size_type const n, const_ref
 }
 
 template <typename Type, typename Allocator>
+template <typename Iterator>
+void vector_base<Type, Allocator>::construct_at_end(Iterator first, Iterator last) NOEXCEPT {
+    for (; first != last; ++first) {
+        alloc_traits::construct(allocator_, end_++, MOVE(*first));
+    }
+}
+
+template <typename Type, typename Allocator>
 void vector_base<Type, Allocator>::destruct_at_end(pointer new_end) NOEXCEPT {
     pointer soon_to_be_end = end_;
     while (soon_to_be_end-- > new_end) {
@@ -205,36 +213,10 @@ void vector_base<Type, Allocator>::swap(vector_base& other) {
 
 // clang-format on
 template <typename Type, typename Allocator>
-void vector_base<Type, Allocator>::relocate(size_type const size, pointer position) {
+void vector_base<Type, Allocator>::roll_elements_from(pointer position, size_type const n) {
     assert(position && "must be non-nullptr");
 
-    vector_base tmp(allocator_, size);
-    alloc_traits::construct_forward(allocator_, position, end_, tmp.end_);
-    swap(tmp);
-}
-
-template <typename Type, typename Allocator>
-void vector_base<Type, Allocator>::relocate(size_type const size,
-                                            size_type const offset,
-                                            pointer         position,
-                                            const_reference value) {
-    assert(position && "must be non-nullptr");
-
-    vector_base new_buffer(allocator_, size);
-    pointer     first = new_buffer.end_ = new_buffer.begin_ + offset;
-
-    alloc_traits::construct(allocator_, new_buffer.end_++, value);
-    alloc_traits::construct_backward(allocator_, begin_, position, first);
-    alloc_traits::construct_forward(allocator_, position, end_, new_buffer.end_);
-    swap(new_buffer);
-}
-
-template <typename Type, typename Allocator>
-void vector_base<Type, Allocator>::roll_elements_over(pointer position) {
-    assert(position && "must be non-nullptr");
-
-    size_type const size = static_cast<size_type>(end_ - begin_);
-    vector_base     new_buffer(allocator_, size ? 2 * size : 8);
+    vector_base new_buffer(allocator_, n);
 
     alloc_traits::construct_forward(allocator_, position, end_, new_buffer.end_);
     swap(new_buffer);
@@ -354,7 +336,7 @@ bool vector<T, A>::empty() const NOEXCEPT {
 template <typename T, typename A>
 void vector<T, A>::reserve(size_type const n) {
     if (n > capacity()) {
-        base::relocate(n, base::begin_);
+        base::roll_elements_from(base::begin_, n);
     }
 }
 
@@ -364,7 +346,7 @@ void vector<T, A>::resize(size_type const n, const_reference value) {
         if (capacity() >= n) {
             base::construct_at_end(n, value);
         } else {
-            base::relocate(n, base::begin_);
+            base::roll_elements_from(base::begin_, n);
             base::construct_at_end(n - size(), value);
         }
     } else if (size() > n){
@@ -433,9 +415,7 @@ typename vector<T, A>::iterator vector<T, A>::insert(const_iterator  position,
 
     if (count <= free_space) {
         move_range_on(count, insert_position);
-        for (size_type i = count; i--;) {
-            alloc_traits::construct(base::allocator_, insert_position++, MOVE(value));
-        }
+        fill(insert_position, count, value);
     } else {
         base::roll_elements_over(insert_position, value, offset, count);
     }
@@ -454,27 +434,21 @@ typename enable_if<
     >::value,
     typename vector<T, A>::iterator
 >::type vector<T, A>::insert(const_iterator position, InputIterator first, InputIterator last) {
-    size_type const offset         = position - begin();
-    size_type const required_space = last - first;
-    size_type const free_space     = base::capacity_ - base::end_;
-    pointer         p              = base::begin_ + offset;
+    // clang-format on
+    size_type const offset          = position - begin();
+    size_type const elements_count  = last - first;
+    size_type const free_space      = base::capacity_ - base::end_;
+    pointer         insert_position = base::begin_ + offset;
+    // clang-format off
 
-    if (1 == required_space)
+    if (1 == elements_count)
         return insert(position, *first);
 
-    if (required_space <= free_space) {
-        move_range_on(required_space, p);
-        for (pointer it = p; it != p + required_space && first != last; ++first) {
-            alloc_traits::construct(base::allocator_, it++, MOVE(*first));
-            // base::allocator_.destroy(first);
-        }
+    if (elements_count <= free_space) {
+        move_range_on(elements_count, insert_position);
+        copy(first, last, insert_position);
     } else {
-        reserve_n_fill(required_space + size() + 8, p, [this, &first, &last](auto& end) {
-            for (; first != last; ++first) {
-                alloc_traits::construct(base::allocator_, end++, MOVE(*first));
-                // base::allocator_.destroy(first);
-            }
-        });
+        base::roll_elements_over(insert_position, value, offset, elements_count);
     }
     return begin() + offset;
 }

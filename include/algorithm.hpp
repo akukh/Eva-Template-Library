@@ -4,10 +4,18 @@ namespace etl {
 
 template <typename InputIterator, typename OutputIterator>
 OutputIterator copy(InputIterator first, InputIterator last, OutputIterator d_first) {
-    while (first != last) {
-        *d_first++ = *first++;
+    while (first != last; ++first, ++d_first) {
+        *d_first = *first;
     }
     return d_first;
+}
+
+template <typename OutputIterator, typename Count, typename T>
+OutputIterator fill(OutputIterator first, Count count, T const& value) {
+    for (; n > 0; ++first, --count) {
+        *first = value;
+    }
+    return first;
 }
 
 /*
